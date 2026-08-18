@@ -13,7 +13,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox, Field, Input } from '@/components/ui/input'
 import { createBooking, getFamilyTree, getPujaById } from '@/lib/data/api'
-import { STANDARD_ADDONS } from '@/lib/data/mock'
+import { STANDARD_ADDONS, priceForCadence } from '@/lib/data/mock'
 import { CADENCE_LABEL, nextOccurrences, occurrencesPerYear } from '@/lib/schedule'
 import { useAuthStore } from '@/lib/store/auth'
 import { useAsync } from '@/lib/hooks'
@@ -115,7 +115,10 @@ export default function BookingFlow() {
     (s, id) => s + (STANDARD_ADDONS.find((a) => a.id === id)?.price ?? 0),
     0,
   )
-  const total = puja.basePrice + addOnTotal
+  // The base price buys a year at the puja's usual rhythm; asking for it more often
+  // costs proportionally more, and the summary re-prices live as the cadence changes.
+  const cadencePrice = priceForCadence(puja, state.cadence)
+  const total = cadencePrice + addOnTotal
   const validNames = state.names.map((n) => n.trim()).filter(Boolean)
 
   const pay = async () => {
@@ -261,6 +264,7 @@ export default function BookingFlow() {
           startDate={state.startDate}
           names={validNames}
           addOns={state.addOns}
+          cadencePrice={cadencePrice}
           total={total}
         />
       </div>
@@ -400,6 +404,17 @@ function StepCadence({
           <Clock className="size-3.5" />
           Roughly {puja.durationMin} minutes each, at the {puja.deity} sannidhi
         </p>
+        <p className="mt-2 border-t border-line pt-2 text-[13px] text-ink">
+          <span className="font-medium">{money(priceForCadence(puja, cadence))}</span>
+          <span className="text-muted"> for the year at this cadence</span>
+          {cadence !== puja.defaultCadence ? (
+            <span className="text-muted">
+              {' '}
+              · {money(puja.basePrice)} at the usual{' '}
+              {CADENCE_LABEL[puja.defaultCadence].toLowerCase()} rhythm
+            </span>
+          ) : null}
+        </p>
       </div>
 
       <Field label="Start date" htmlFor="bk-start" className="max-w-[220px]">
@@ -524,6 +539,7 @@ function OrderSummary({
   startDate,
   names,
   addOns,
+  cadencePrice,
   total,
 }: {
   puja: PujaCatalogItem
@@ -531,6 +547,7 @@ function OrderSummary({
   startDate: string
   names: string[]
   addOns: string[]
+  cadencePrice: number
   total: number
 }) {
   return (
@@ -540,7 +557,7 @@ function OrderSummary({
       <dl className="mt-3 space-y-2.5 text-[13.5px]">
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-muted">{puja.name}</dt>
-          <dd className="font-medium tabular-nums">{money(puja.basePrice)}</dd>
+          <dd className="font-medium tabular-nums">{money(cadencePrice)}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-muted">Cadence</dt>
