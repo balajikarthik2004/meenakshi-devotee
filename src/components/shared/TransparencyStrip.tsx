@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Scale, Target, Wallet } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { getTransparencySnapshot } from '@/lib/data/api'
 import type { TransparencySnapshot } from '@/lib/data/types'
 import { Progress, Skeleton } from '@/components/ui/badge'
 import { cn, money } from '@/lib/utils'
 
 const TILES = [
-  { key: 'ytdCollected', label: 'YTD Collected', Icon: Wallet, tone: 'leaf' },
-  { key: 'annualTarget', label: 'Annual Target', Icon: Target, tone: 'gold' },
-  { key: 'balanceToBreakeven', label: 'Balance to Break-even', Icon: Scale, tone: 'brand' },
+  { key: 'ytdCollected', label: 'Raised this year' },
+  { key: 'annualTarget', label: 'Annual target' },
+  { key: 'balanceToBreakeven', label: 'Still to raise' },
 ] as const
 
-/** The public promise on the homepage: three numbers, no interpretation needed. */
+/**
+ * The temple's promise, in three numbers. Set on the dark brand ground so it reads as a
+ * statement rather than one more card in the stack.
+ */
 export function TransparencyStrip({ className }: { className?: string }) {
   const [snap, setSnap] = useState<TransparencySnapshot | null>(null)
 
@@ -20,62 +24,59 @@ export function TransparencyStrip({ className }: { className?: string }) {
   }, [])
 
   return (
-    <section
-      className={cn(
-        'rounded-[14px] border border-line bg-card p-5 shadow-[var(--shadow)]',
-        className,
-      )}
-    >
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-serif text-[20px]">Where your offering goes</h2>
-        <p className="text-[12px] uppercase tracking-[0.08em] text-muted">
+    <section className={cn('bg-brand-800 text-brand-50', className)}>
+      <div className="mx-auto max-w-5xl px-6 py-14 text-center">
+        <p className="text-[11px] uppercase tracking-[0.28em] text-saffron-300">
           Updated nightly · full transparency
         </p>
-      </div>
+        <h2 className="mt-3 font-serif text-[30px] leading-tight text-white">
+          Where your offering goes
+        </h2>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {TILES.map(({ key, label, Icon, tone }) => (
-          <div
-            key={key}
-            className={cn(
-              'rounded-[10px] border p-4',
-              tone === 'leaf' && 'border-leaf-500/25 bg-leaf-500/[0.07]',
-              tone === 'gold' && 'border-gold-500/30 bg-gold-500/[0.08]',
-              tone === 'brand' && 'border-brand-500/25 bg-brand-500/[0.06]',
-            )}
-          >
-            <div className="flex items-center gap-2 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">
-              <Icon
-                className={cn(
-                  'size-4',
-                  tone === 'leaf' && 'text-leaf-500',
-                  tone === 'gold' && 'text-gold-600',
-                  tone === 'brand' && 'text-brand-500',
+        <dl className="mt-9 grid gap-8 sm:grid-cols-3">
+          {TILES.map(({ key, label }) => (
+            <div key={key}>
+              <dt className="text-[11.5px] uppercase tracking-[0.14em] text-brand-100/65">
+                {label}
+              </dt>
+              <dd className="mt-2">
+                {snap ? (
+                  <span
+                    className={cn(
+                      'font-serif text-[38px] leading-none',
+                      key === 'balanceToBreakeven' ? 'text-saffron-300' : 'text-white',
+                    )}
+                  >
+                    {money(snap[key])}
+                  </span>
+                ) : (
+                  <Skeleton className="mx-auto h-9 w-32 bg-white/15" />
                 )}
-              />
-              {label}
+              </dd>
             </div>
-            {snap ? (
-              <p className="mt-2 font-serif text-[28px] leading-none text-ink">
-                {money(snap[key])}
-              </p>
-            ) : (
-              <Skeleton className="mt-2 h-7 w-28" />
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </dl>
 
-      <div className="mt-4">
-        <Progress
-          value={snap?.achievedPct ?? 0}
-          tone="leaf"
-          label={`${snap?.achievedPct ?? 0}% of the annual operating target raised`}
-        />
-        <p className="mt-1.5 text-[12.5px] text-muted">
-          {snap ? `${snap.achievedPct}% of this year’s operating target raised.` : 'Loading…'} Every
-          dollar is reported to the board monthly and published in the annual report.
-        </p>
+        <div className="mx-auto mt-9 max-w-xl">
+          <Progress
+            value={snap?.achievedPct ?? 0}
+            tone="gold"
+            label={`${snap?.achievedPct ?? 0}% of the annual operating target raised`}
+            className="bg-white/15"
+          />
+          <p className="mt-3 text-[13.5px] leading-relaxed text-brand-100/75">
+            {snap ? `${snap.achievedPct}% of this year’s operating target.` : 'Loading…'} Every
+            dollar is reported to the board monthly and published in the annual report.
+          </p>
+        </div>
+
+        <Link
+          to="/about"
+          className="group mt-6 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-saffron-200 hover:text-saffron-100"
+        >
+          How the temple is funded
+          <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+        </Link>
       </div>
     </section>
   )

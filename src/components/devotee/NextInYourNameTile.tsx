@@ -20,33 +20,35 @@ export function NextInYourNameTile({
   return (
     <div
       className={cn(
-        'rounded-[10px] border border-brand-500/25 bg-brand-500/[0.06] p-4 shadow-[var(--shadow-sm)]',
+        'relative isolate overflow-hidden rounded-[10px] border border-saffron-300/50 bg-gradient-to-r from-brand-800 to-brand-700 p-5 text-white shadow-[var(--shadow)]',
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-saffron-300">
           Next puja in your name
         </p>
-        <span className="grid size-7 place-items-center rounded-md bg-brand-500/12 text-brand-600">
+        <span className="grid size-8 place-items-center rounded-full bg-saffron-400/15 text-saffron-300">
           <Flame className="size-4" />
         </span>
       </div>
 
       {occurrence && puja ? (
         <>
-          <p className="mt-2 font-serif text-[19px] leading-tight text-ink">
+          <p className="mt-2 font-serif text-[26px] leading-tight text-white">
             {fmtDate(occurrence.scheduledAt, 'MMM d')} · {puja.name}
           </p>
-          <p className="mt-1 text-[12.5px] text-muted">
+          <p className="mt-1.5 text-[13px] text-brand-100/80">
             {fmtTime(occurrence.scheduledAt)} at the {puja.deity} sannidhi
             {names?.length ? ` · for ${names[0]}` : ''}
           </p>
         </>
       ) : (
         <>
-          <p className="mt-2 font-serif text-[19px] leading-tight text-muted">Nothing scheduled</p>
-          <p className="mt-1 text-[12.5px] text-muted">
+          <p className="mt-2 font-serif text-[26px] leading-tight text-white/70">
+            Nothing scheduled
+          </p>
+          <p className="mt-1.5 text-[13px] text-brand-100/80">
             Sponsor a puja and your family’s names will appear here.
           </p>
         </>

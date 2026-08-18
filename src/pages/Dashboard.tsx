@@ -97,30 +97,33 @@ export default function Dashboard() {
         }
       />
 
-      {/* Row 1 — six stat tiles */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {/* What's next comes first — a devotee opens this page to check a date, not a total. */}
+      <NextInYourNameTile
+        occurrence={nextOcc}
+        puja={nextPuja}
+        names={nextBooking?.sankalpamNames}
+        className="mb-4"
+      />
+
+      {/* Four numbers, not six. Lifetime giving and "upcoming events" were noise here —
+          the first duplicates the YTD figure, the second belongs on the calendar. */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label={`Donations (${thisYear})`}
+          label={`Given in ${thisYear}`}
           value={money(ytd)}
-          sub={`${donations.filter((d) => new Date(d.createdAt).getFullYear() === thisYear).length} gifts this year`}
+          sub={`${money(lifetime)} lifetime`}
           Icon={Wallet}
           tone="leaf"
         />
         <StatTile
-          label="Lifetime contributions"
-          value={money(lifetime)}
-          sub="Donations and puja sponsorships"
-          Icon={Coins}
-        />
-        <StatTile
-          label="Pujas booked"
+          label="Active pujas"
           value={activeBookings.length}
-          sub={`${bookings.length} total, all time`}
+          sub={`${bookings.length} sponsored all time`}
           Icon={Flame}
           tone="brand"
         />
         <StatTile
-          label="Upcoming events"
+          label="Festivals ahead"
           value={eventsSoon.length}
           sub="In the next 30 days"
           Icon={CalendarDays}
@@ -131,7 +134,7 @@ export default function Dashboard() {
           sub={
             membership ? (
               <span className="inline-flex items-center gap-1.5">
-                Expires {fmtDate(membership.endDate, 'MMM yyyy')}
+                Renews {fmtDate(membership.endDate, 'MMM yyyy')}
                 <StatusPill status={membership.status} />
               </span>
             ) : (
@@ -143,15 +146,10 @@ export default function Dashboard() {
           Icon={Heart}
           tone="gold"
         />
-        <NextInYourNameTile
-          occurrence={nextOcc}
-          puja={nextPuja}
-          names={nextBooking?.sankalpamNames}
-        />
       </div>
 
       {/* Row 2 — my pujas + upcoming events */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <div className="mt-6 grid items-start gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="min-w-0">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>My yearly pujas</CardTitle>
@@ -249,7 +247,7 @@ export default function Dashboard() {
       </div>
 
       {/* Row 3 — donations + tax receipt */}
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <div className="mt-6 grid items-start gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card className="min-w-0">
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle>Recent donations</CardTitle>

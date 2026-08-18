@@ -44,14 +44,16 @@ export default function SignIn() {
           className="absolute inset-0 h-full w-full"
           label="Temple welcome"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/60 via-ink/40 to-ink/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-900/80 via-brand-900/55 to-brand-900/90" />
         <div className="relative flex h-full flex-col justify-between p-10 text-white">
           <Link to="/" className="flex items-center gap-2.5 text-white">
             <Logo size={38} />
-            <span className="font-serif text-[17px]">{TEMPLE.name}</span>
+            <span className="font-serif text-[17px] text-saffron-100">{TEMPLE.name}</span>
           </Link>
           <div className="max-w-md space-y-3">
-            <h2 className="font-serif text-[34px] leading-[1.15]">Welcome back to your temple.</h2>
+            <h2 className="font-serif text-[36px] leading-[1.12] text-saffron-100">
+              Welcome back to your temple.
+            </h2>
             <p className="text-[15px] leading-relaxed text-white/80">
               Sign in to sponsor a puja in your family’s name, follow your spiritual calendar, and
               see exactly where every dollar you give is spent.

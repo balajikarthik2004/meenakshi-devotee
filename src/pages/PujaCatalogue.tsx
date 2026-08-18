@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Search, X } from 'lucide-react'
 import type { PujaType } from '@/lib/data/types'
 import { PageHeader } from '@/components/layout/layouts'
 import { PujaCard } from '@/components/shared/PujaCard'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
 import { Chips } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { DeityArt } from '@/components/shared/DeityArt'
 import { Input, Select } from '@/components/ui/input'
 import { getPujaCatalog } from '@/lib/data/api'
 import { useAsync } from '@/lib/hooks'
@@ -45,6 +47,9 @@ const HEADINGS: Record<string, { title: string; subtitle: string }> = {
 
 export default function PujaCatalogue({ filter }: { filter?: PujaType }) {
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
+  // The sannidhi tiles on the homepage deep-link here with ?deity=Murugan.
+  const deity = params.get('deity')
   const active = filter ?? 'all'
   const [sort, setSort] = useState<Sort>('price-asc')
   const [q, setQ] = useState('')
@@ -52,15 +57,15 @@ export default function PujaCatalogue({ filter }: { filter?: PujaType }) {
   const { data, loading } = useAsync(() => getPujaCatalog(filter), [filter])
 
   const items = useMemo(() => {
-    const list = (data ?? []).filter((p) =>
-      q ? `${p.name} ${p.deity}`.toLowerCase().includes(q.toLowerCase()) : true,
-    )
+    const list = (data ?? [])
+      .filter((p) => (deity ? p.deity === deity : true))
+      .filter((p) => (q ? `${p.name} ${p.deity}`.toLowerCase().includes(q.toLowerCase()) : true))
     return [...list].sort((a, b) => {
       if (sort === 'price-asc') return a.basePrice - b.basePrice
       if (sort === 'price-desc') return b.basePrice - a.basePrice
       return a.deity.localeCompare(b.deity)
     })
-  }, [data, sort, q])
+  }, [data, sort, q, deity])
 
   const heading = HEADINGS[active] ?? HEADINGS.all!
 
@@ -68,11 +73,43 @@ export default function PujaCatalogue({ filter }: { filter?: PujaType }) {
     <>
       <PageHeader title={heading.title} subtitle={heading.subtitle} />
 
+      {deity ? (
+        <div className="mb-5 flex items-center gap-4 overflow-hidden rounded-[10px] border border-line bg-card shadow-[var(--shadow-sm)]">
+          <DeityArt deity={deity} className="hidden h-24 w-32 shrink-0 sm:block" label={deity} />
+          <div className="min-w-0 flex-1 py-3">
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.1em] text-saffron-600">
+              Sannidhi
+            </p>
+            <p className="font-serif text-[21px] leading-tight">{deity}</p>
+            <p className="text-[13px] text-muted">
+              {items.length} puja{items.length === 1 ? '' : 's'} offered at this shrine
+            </p>
+          </div>
+          <Button
+            variant="plain"
+            size="sm"
+            className="mr-3 shrink-0"
+            onClick={() => {
+              params.delete('deity')
+              setParams(params, { replace: true })
+            }}
+          >
+            <X />
+            Clear
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Chips
           items={FILTERS.map((f) => ({ key: f.key, label: f.label }))}
           value={active}
-          onChange={(k) => navigate(FILTERS.find((f) => f.key === k)!.path)}
+          onChange={(k) =>
+            navigate(
+              FILTERS.find((f) => f.key === k)!.path +
+                (deity ? `?deity=${encodeURIComponent(deity)}` : ''),
+            )
+          }
           className="flex-1"
         />
         <div className="relative">
@@ -101,7 +138,7 @@ export default function PujaCatalogue({ filter }: { filter?: PujaType }) {
         <LoadingSkeleton rows={6} />
       ) : items.length === 0 ? (
         <EmptyState
-          title="No pujas match that search"
+          title={deity ? `No pujas listed for ${deity} in this view` : 'No pujas match that search'}
           detail="Try a different deity name, or clear the filter to see the whole catalogue."
         />
       ) : (
