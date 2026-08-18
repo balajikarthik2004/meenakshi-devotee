@@ -73,10 +73,14 @@ export function AppLayout() {
   const navigate = useNavigate()
   const [mobileNav, setMobileNav] = useState(false)
 
+  /* On the sand rail the current page is a white card rather than a tinted block —
+     the surface underneath is already warm, so a second tint would barely register. */
   const navItem = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'flex items-center gap-2.5 rounded-md px-3 py-2.5 text-[13.5px] font-medium transition-colors',
-      isActive ? 'bg-brand-500/[0.09] text-brand-600' : 'text-muted hover:bg-tint hover:text-ink',
+      'group relative flex items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200',
+      isActive
+        ? 'bg-gradient-to-r from-white to-white/60 text-brand-700 shadow-sm ring-1 ring-saffron-400/20'
+        : 'text-muted hover:bg-white/40 hover:text-brand-900 hover:translate-x-0.5',
     )
 
   const nav = (
@@ -89,8 +93,18 @@ export function AppLayout() {
           onClick={() => setMobileNav(false)}
           className={navItem}
         >
-          <Icon className="size-4 shrink-0" />
-          {label}
+          {({ isActive }) => (
+            <>
+              {isActive ? (
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-saffron-400"
+                />
+              ) : null}
+              <Icon className="size-4 shrink-0" />
+              {label}
+            </>
+          )}
         </NavLink>
       ))}
       <button
@@ -99,7 +113,7 @@ export function AppLayout() {
           signOut()
           navigate('/')
         }}
-        className="mt-1 flex items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-[13.5px] font-medium text-muted transition-colors hover:bg-tint hover:text-ink"
+        className="group mt-1 flex items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left text-[13.5px] font-medium text-muted transition-all duration-200 hover:bg-white/40 hover:text-brand-900 hover:translate-x-0.5"
       >
         <LogOut className="size-4 shrink-0" />
         Sign out
@@ -108,9 +122,9 @@ export function AppLayout() {
   )
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="app-shell min-h-dvh">
       {/* Mobile bar */}
-      <div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line bg-card px-4 lg:hidden">
+      <div className="app-rail sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line px-4 lg:hidden">
         <Button
           variant="plain"
           size="icon"
@@ -127,12 +141,15 @@ export function AppLayout() {
         ) : null}
       </div>
       {mobileNav ? (
-        <div className="animate-fade-in border-b border-line bg-card p-3 lg:hidden">{nav}</div>
+        <div className="app-rail animate-fade-in border-b border-line p-3 lg:hidden">{nav}</div>
       ) : null}
 
-      <div className="mx-auto flex max-w-[1240px] gap-6 px-4 py-6 sm:px-6 lg:py-8">
-        <aside className="sticky top-8 hidden h-fit w-[236px] shrink-0 lg:block">
-          <Link to="/" className="mb-5 flex items-center gap-2.5">
+      <div className="lg:flex">
+        {/* A full-height rail rather than a column of links floating on the page: the
+            navigation gets its own surface, and the left edge of every screen is
+            anchored at any window height. */}
+        <aside className="app-rail sticky top-0 hidden h-dvh w-[254px] shrink-0 flex-col overflow-y-auto border-r border-line px-4 py-6 lg:flex">
+          <Link to="/" className="mb-5 flex items-center gap-2.5 px-1">
             <Logo size={32} />
             <span className="leading-tight">
               <span className="block font-serif text-[15px]">Sri Meenakshi</span>
@@ -143,7 +160,7 @@ export function AppLayout() {
           </Link>
 
           {user ? (
-            <div className="mb-4 flex items-center gap-2.5 rounded-[10px] border border-line bg-card p-3">
+            <div className="mb-4 flex items-center gap-2.5 rounded-[12px] border border-line bg-card p-3 shadow-[var(--shadow-sm)]">
               <Avatar initials={user.avatarInitials} />
               <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-medium">{user.name}</p>
@@ -153,10 +170,18 @@ export function AppLayout() {
           ) : null}
 
           {nav}
+
+          <p className="mt-auto px-3 pt-6 text-[11px] leading-relaxed text-muted/70">
+            Sri Meenakshi Devasthanam
+            <br />
+            Pearland, Texas
+          </p>
         </aside>
 
         <main className="animate-fade-in min-w-0 flex-1">
-          <Outlet />
+          <div className="mx-auto max-w-[1080px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

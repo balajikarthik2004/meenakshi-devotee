@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarDays } from 'lucide-react'
 import type { TempleEvent } from '@/lib/data/types'
 import { buttonVariants } from '@/components/ui/button'
-import { DeityArt } from './DeityArt'
 import { cn, fmtDate } from '@/lib/utils'
 
 /**
@@ -14,21 +13,21 @@ import { cn, fmtDate } from '@/lib/utils'
 export function HeroBanner({ next, className }: { next?: TempleEvent; className?: string }) {
   return (
     <section className={cn('relative isolate overflow-hidden', className)}>
-      <DeityArt
-        deity="gopuram"
-        label="The gopuram of the Meenakshi temple"
-        className="absolute inset-0 h-full w-full"
-        pan
-        priority
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 h-full w-full object-cover"
+        src="/deities/hero.mp4"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-brand-900/80 via-brand-900/60 to-brand-900/90" />
-      {/* A soft pool of shade behind the copy — the gopuram carving is far too busy
-          to carry body text on its own. */}
+      <div className="absolute inset-0 bg-brand-900/20" />
+      {/* A soft pool of shade behind the copy to keep text readable against the video. */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            'radial-gradient(58% 48% at 50% 52%, rgba(40,5,3,0.72) 0%, rgba(40,5,3,0.35) 55%, transparent 100%)',
+            'radial-gradient(58% 48% at 50% 52%, rgba(40,5,3,0.5) 0%, rgba(40,5,3,0.2) 55%, transparent 100%)',
         }}
       />
 

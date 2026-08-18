@@ -184,7 +184,7 @@ export default function MembershipPage() {
                     {isCurrent ? <Badge variant="leaf">Current</Badge> : null}
                   </div>
                   <p className="mt-1 text-[13px] text-muted">{t.tagline}</p>
-                  <p className="mt-3 font-serif text-[32px] leading-none">
+                  <p className="mt-3 text-[32px] leading-none tabular-nums">
                     {money(t.price)}
                     <span className="ml-1 font-sans text-[13px] text-muted">/ year</span>
                   </p>
@@ -244,7 +244,7 @@ export default function MembershipPage() {
                 <h2 className="font-serif text-[20px]">
                   Checkout — {titleCase(selected)} membership
                 </h2>
-                <span className="font-serif text-[24px]">{money(price)}</span>
+                <span className="text-[24px] tabular-nums">{money(price)}</span>
               </div>
 
               <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border border-line p-3.5 transition-colors hover:border-brand-300">

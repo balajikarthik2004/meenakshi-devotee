@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Tibetan:wght@400..700&display=swap');
 @import 'tailwindcss';
 
 /* ================================================================
@@ -18,8 +19,36 @@
   font-weight: 400;
   font-display: swap;
   src: url('/fonts/marcellus-400.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074,
-    U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191,
+    U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Plus Jakarta Sans — the reading face. A humanist sans with rounded terminals and a
+   tall x-height: warm enough to sit on cream paper beside Marcellus, open enough to
+   stay legible at the 12–13px used in tables and stat labels. One variable file
+   (400–800 in 27 KB), self-hosted, so there is no third-party request and no CLS.
+   latin-ext is a second face the browser fetches only if a name actually needs it. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/jakarta-var-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('/fonts/jakarta-var-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
 }
 
 @theme {
@@ -56,16 +85,20 @@
   --color-ink: #241a14;
   --color-muted: #6f6157;
   --color-line: #ece2d2;
-  --color-bg: #fdfbf6;
+  /* Paper, not white — and the rail a shade deeper again, so the portal reads as
+     two surfaces: a sand-coloured sidebar and the page it opens onto. */
+  --color-bg: #fbf6ec;
   --color-card: #ffffff;
   --color-tint: #fbf3e4;
+  --color-rail: #f5e7cd;
 
   /* Typography */
   --font-serif: 'Marcellus', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-number: 'Noto Serif Tibetan', var(--font-serif);
 
   /* Radii */
   --radius-sm: 6px;
@@ -93,8 +126,47 @@ body {
   font-family: var(--font-sans);
   font-size: 15px;
   line-height: 1.6;
+  /* Jakarta sets a touch wide; a hair of negative tracking settles it at reading
+     sizes without closing the counters that make it legible in the first place. */
+  letter-spacing: -0.008em;
+  font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Figures in tables, stat tiles and money columns line up only if they share a width. */
+.tabular-nums,
+th,
+td {
+  font-family: var(--font-number);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------- app shell */
+
+/* Both surfaces carry a barely-there wash of saffron and kumkum rather than a flat
+   fill, so the page has a direction to it — the way light falls through a doorway.
+   Fixed attachment keeps the wash on the viewport instead of sliding as you scroll. */
+.app-shell {
+  background-color: var(--color-bg);
+  /* A beautiful, modern mesh gradient for the right side */
+  background-image:
+    radial-gradient(60rem 40rem at 100% 0%, rgba(242, 171, 33, 0.15), transparent 70%),
+    radial-gradient(50rem 50rem at 0% 100%, rgba(156, 31, 22, 0.08), transparent 70%),
+    radial-gradient(40rem 40rem at 50% 50%, rgba(255, 255, 255, 0.6), transparent 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* Premium glassmorphism sidebar rail */
+.app-rail {
+  background: rgba(253, 246, 235, 0.65); /* warm translucent tint */
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 1px 0 24px rgba(64, 34, 12, 0.04);
 }
 
 /* Display type: Marcellus is small on the body, so headings get a nudge up

@@ -53,7 +53,7 @@ export function EventCard({
           <span className="block text-[9.5px] font-semibold uppercase tracking-[0.14em] text-saffron-300">
             {fmtDate(date, 'MMM')}
           </span>
-          <span className="block font-serif text-[19px] leading-none text-white">
+          <span className="block text-[19px] leading-none tabular-nums text-white">
             {fmtDate(date, 'd')}
           </span>
         </div>

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 export const TableWrap = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      'w-full overflow-x-auto rounded-[10px] border border-line bg-card shadow-[var(--shadow-sm)]',
+      'w-full overflow-x-auto rounded-[12px] border border-line bg-card shadow-[var(--shadow-sm)]',
       className,
     )}
     {...props}

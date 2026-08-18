@@ -21,44 +21,43 @@ export interface DeityImageMeta {
 
 export const DEITY_IMAGES: Record<string, DeityImageMeta> = {
   Meenakshi: {
-    src: '/deities/meenakshi.webp',
+    src: '/deities/meenakshi.png',
     focus: '50% 22%',
     credit: 'Raja Ravi Varma · public domain',
   },
   Sundareswarar: {
-    src: '/deities/sundareswarar.webp',
+    src: '/deities/sundareswarar.png',
     focus: '50% 30%',
     credit: 'LACMA · public domain',
   },
   Venkateshwara: {
-    src: '/deities/venkateshwara.webp',
+    src: '/deities/venkateshwara.png',
     focus: '50% 28%',
     credit: 'Wikimedia Commons · public domain',
   },
   Lakshmi: {
-    src: '/deities/lakshmi.webp',
+    src: '/deities/lakshmi.png',
     focus: '50% 26%',
     credit: 'Raja Ravi Varma · public domain',
   },
   Ganesha: {
-    src: '/deities/ganesha.webp',
+    src: '/deities/ganesha.png',
     focus: '50% 30%',
     credit: 'Google Art Project · public domain',
   },
   Murugan: {
-    src: '/deities/murugan.webp',
+    src: '/deities/murugan.png',
     focus: '50% 24%',
     credit: 'Raja Ravi Varma · public domain',
   },
   Durga: {
-    src: '/deities/durga.webp',
+    src: '/deities/durga.png',
     focus: '50% 22%',
     credit: 'Wikimedia Commons · public domain',
   },
-  // Commons has no suitably licensed image of Ayyappan. Rather than misattribute
-  // another deity's likeness, this slot shows the lamp offering central to his worship.
+
   Ayyappan: {
-    src: '/deities/lamps.webp',
+    src: '/deities/ayyappan.jpg',
     focus: '50% 55%',
     credit: 'McKay Savage · CC BY 2.0',
   },

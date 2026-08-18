@@ -223,7 +223,7 @@ export default function Facility() {
 
           <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
             <span className="text-[13.5px] font-medium">Estimated total</span>
-            <span className="font-serif text-[26px] tabular-nums">{money(total)}</span>
+            <span className="text-[26px] tabular-nums">{money(total)}</span>
           </div>
           <p className="mt-1 text-[12px] text-muted">{fmtDate(date, 'EEEE, MMMM d, yyyy')}</p>
 

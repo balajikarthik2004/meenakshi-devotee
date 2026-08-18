@@ -242,7 +242,7 @@ export default function Donate() {
 
           <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
             <span className="text-[13.5px] font-medium">Total today</span>
-            <span className="font-serif text-[26px] tabular-nums">{money(amount)}</span>
+            <span className="text-[26px] tabular-nums">{money(amount)}</span>
           </div>
 
           <Button size="lg" className="mt-4 w-full" onClick={give} disabled={busy || amount < 1}>

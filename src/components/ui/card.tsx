@@ -9,7 +9,7 @@ export const Card = React.forwardRef<HTMLDivElement, Div>(({ className, ...props
     // `min-w-0` so a card never forces its flex/grid parent wider than the viewport —
     // without it an inner `overflow-x-auto` table never gets the chance to clip.
     className={cn(
-      'min-w-0 rounded-[10px] border border-line bg-card shadow-[var(--shadow)]',
+      'min-w-0 rounded-[12px] border border-line bg-card shadow-[var(--shadow)]',
       className,
     )}
     {...props}

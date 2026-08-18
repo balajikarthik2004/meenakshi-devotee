@@ -82,7 +82,7 @@ export default function SignUp() {
                 id="su-name"
                 value={form.name}
                 onChange={set('name')}
-                placeholder="Anand Krishnan"
+                placeholder="Balaji Krishnan"
               />
             </Field>
             <Field label="Email" htmlFor="su-email">

@@ -189,7 +189,7 @@ export default function EventDetail() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Anand Krishnan"
+                    placeholder="Balaji Krishnan"
                   />
                 </Field>
                 <Field label="Email" htmlFor="rsvp-email">
@@ -215,7 +215,7 @@ export default function EventDetail() {
                     >
                       <Minus />
                     </Button>
-                    <span className="w-12 text-center font-serif text-[20px] tabular-nums">
+                    <span className="w-12 text-center text-[20px] tabular-nums">
                       {seats}
                     </span>
                     <Button

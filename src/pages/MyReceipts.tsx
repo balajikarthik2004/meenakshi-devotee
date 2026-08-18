@@ -85,12 +85,12 @@ export default function MyReceipts() {
           {byYear.map((y) => (
             <Card key={y.year} className="flex flex-col p-5">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-serif text-[22px]">{y.year}</h2>
+                <h2 className="text-[22px] tabular-nums">{y.year}</h2>
                 <span className="grid size-9 place-items-center rounded-[10px] bg-tint text-brand-500">
                   <FileText className="size-4" />
                 </span>
               </div>
-              <p className="mt-2 font-serif text-[26px] leading-none">{money(y.total)}</p>
+              <p className="mt-2 text-[26px] leading-none tabular-nums">{money(y.total)}</p>
               <p className="mt-1.5 text-[12.5px] text-muted">
                 {y.lines.length} line item{y.lines.length === 1 ? '' : 's'} · issued{' '}
                 {y.year === new Date().getFullYear()

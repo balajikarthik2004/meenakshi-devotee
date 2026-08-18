@@ -439,7 +439,7 @@ function StepCadence({
               <span className="block text-[10.5px] font-semibold uppercase tracking-[0.08em] text-brand-500">
                 {fmtDate(d, 'MMM')}
               </span>
-              <span className="block font-serif text-[19px] leading-tight">{fmtDate(d, 'd')}</span>
+              <span className="block text-[19px] leading-tight tabular-nums">{fmtDate(d, 'd')}</span>
               <span className="block text-[11.5px] text-muted">{fmtDate(d, 'EEE')}</span>
             </li>
           ))}
@@ -592,7 +592,7 @@ function OrderSummary({
 
       <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
         <span className="text-[13.5px] font-medium">Total</span>
-        <span className="font-serif text-[24px] tabular-nums">{money(total)}</span>
+        <span className="text-[24px] tabular-nums">{money(total)}</span>
       </div>
 
       <p className="mt-2 text-[11.5px] leading-relaxed text-muted">

@@ -57,7 +57,7 @@ export function PujaCard({
         </div>
 
         <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-line pt-3">
-          <p className="font-serif text-[22px] leading-none text-ink">
+          <p className="text-[22px] leading-none text-ink tabular-nums">
             {money(puja.basePrice)}
             <span className="ml-1.5 font-sans text-[11.5px] text-muted">
               {puja.defaultCadence === 'one-time' ? 'one-time' : 'per year'}
