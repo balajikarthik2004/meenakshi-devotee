@@ -74,6 +74,7 @@ export function LogoWordmark({ compact = false }: { compact?: boolean }) {
       <Logo size={compact ? 30 : 40} />
       <span className="min-w-0 leading-tight">
         <span className="block truncate font-serif text-[17px] text-brand-600">Sri Meenakshi</span>
+        <span className="block truncate font-serif text-[13px] text-brand-600">Temple Society</span>
         {!compact && (
           <span className="block text-[10px] uppercase tracking-[0.18em] text-muted">
             Devasthanam · Pearland

@@ -60,6 +60,8 @@ export default function CalendarPage() {
       <PageHeader
         title="Temple calendar"
         subtitle="The weekly rhythm, the festival year, and the pujas offered in your name."
+        backTo="/dashboard"
+        backLabel="Back to Dashboard"
         actions={
           <Chips
             value={filter}

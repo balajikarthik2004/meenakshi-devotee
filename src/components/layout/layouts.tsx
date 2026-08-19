@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
+  ArrowLeft,
   CalendarDays,
   Flame,
   HandCoins,
@@ -51,8 +52,8 @@ export function MinimalLayout() {
 
 const APP_NAV = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
-  { to: '/puja', label: 'Book a Puja', Icon: Sparkles },
+  // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
+  { to: '/puja', label: 'Yearly Puja', Icon: Sparkles },
   { to: '/donate', label: 'Donate', Icon: HandCoins },
   { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
@@ -152,7 +153,11 @@ export function AppLayout() {
           <Link to="/" className="mb-5 flex items-center gap-2.5 px-1">
             <Logo size={32} />
             <span className="leading-tight">
-              <span className="block font-serif text-[15px]">Sri Meenakshi</span>
+              <span className="block font-serif text-[15px] leading-[1.2]">
+                Sri Meenakshi
+                <br />
+                Temple Society
+              </span>
               <span className="block text-[10.5px] uppercase tracking-[0.12em] text-muted">
                 Devotee portal
               </span>
@@ -193,20 +198,32 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  backTo,
+  backLabel = 'Back',
   className,
 }: {
   title: string
   subtitle?: React.ReactNode
   actions?: React.ReactNode
+  backTo?: string
+  backLabel?: string
   className?: string
 }) {
   return (
-    <div className={cn('mb-6 flex flex-wrap items-end justify-between gap-3', className)}>
-      <div className="min-w-0">
-        <h1 className="font-serif text-[26px] leading-tight text-ink">{title}</h1>
-        {subtitle ? <p className="mt-1 text-[13.5px] text-muted">{subtitle}</p> : null}
+    <div className={cn('mb-6', className)}>
+      {backTo ? (
+        <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-brand-600 hover:text-brand-700">
+          <ArrowLeft className="size-4" />
+          {backLabel}
+        </Link>
+      ) : null}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-serif text-[26px] leading-tight text-ink">{title}</h1>
+          {subtitle ? <p className="mt-1 text-[13.5px] text-muted">{subtitle}</p> : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   )
 }

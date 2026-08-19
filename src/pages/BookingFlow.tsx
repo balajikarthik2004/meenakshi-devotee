@@ -67,7 +67,7 @@ function reducer(s: WizardState, a: Action): WizardState {
   }
 }
 
-const CADENCES: Cadence[] = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']
+const CADENCES: Cadence[] = ['yearly', 'monthly', 'weekly', 'quarterly', 'daily']
 
 const STEPS = ['Confirm puja', 'Cadence', 'Sankalpam', 'Review & pay']
 
@@ -92,9 +92,9 @@ export default function BookingFlow() {
   const [processing, setProcessing] = useState(false)
   const [booked, setBooked] = useState<Booking | null>(null)
 
-  // Default the cadence to whatever the catalogue item recommends.
+  // Default the cadence to yearly as requested.
   useEffect(() => {
-    if (puja) dispatch({ type: 'hydrate', patch: { cadence: puja.defaultCadence } })
+    if (puja) dispatch({ type: 'hydrate', patch: { cadence: 'yearly' } })
   }, [puja])
 
   if (loading) return <LoadingSkeleton variant="card" rows={1} className="sm:grid-cols-1" />
@@ -363,7 +363,7 @@ function StepCadence({
       <div>
         <h2 className="font-serif text-[20px]">How often should it be offered?</h2>
         <p className="mt-1 text-[13px] text-muted">
-          The temple recommends {CADENCE_LABEL[puja.defaultCadence].toLowerCase()} for {puja.name}.
+          The temple recommends {CADENCE_LABEL['yearly'].toLowerCase()} for {puja.name}.
           Sponsorship covers one year from your start date.
         </p>
       </div>
@@ -383,7 +383,7 @@ function StepCadence({
             )}
           >
             {CADENCE_LABEL[c]}
-            {c === puja.defaultCadence ? (
+            {c === 'yearly' ? (
               <span
                 className={cn('ml-1.5 text-[11px]', cadence === c ? 'text-white/75' : 'text-muted')}
               >

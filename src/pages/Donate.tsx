@@ -69,18 +69,18 @@ export default function Donate() {
           { label: 'Method', value: titleCase(done.paymentMethod) },
           ...(done.dedicatedTo ? [{ label: 'Dedicated to', value: done.dedicatedTo }] : []),
         ]}
-        emailSubject={`Your ${money(done.amount)} gift to Sri Meenakshi Devasthanam`}
+        emailSubject={`Your ${money(done.amount)} Donation to Sri Meenakshi Devasthanam`}
         emailBody={
           <>
             <p>Dear {user.name},</p>
             <p className="mt-2">
-              Thank you for your gift of <strong>{money(done.amount)}</strong> to the{' '}
+              Thank you for your Donation of <strong>{money(done.amount)}</strong> to the{' '}
               {titleCase(done.category)} fund. Your official contribution statement is attached
               below and will also appear in your {new Date().getFullYear()} annual summary.
             </p>
             {done.dedicatedTo ? (
               <p className="mt-2">
-                This gift was dedicated: <em>{done.dedicatedTo}</em>.
+                This Donation was dedicated: <em>{done.dedicatedTo}</em>.
               </p>
             ) : null}
           </>
@@ -121,7 +121,7 @@ export default function Donate() {
     <>
       <PageHeader
         title="Make a donation"
-        subtitle="Choose where your gift goes. Every fund is reported separately in the annual statement."
+        subtitle="Choose where your Donation goes. Every fund is reported separately in the annual statement."
       />
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
@@ -160,11 +160,11 @@ export default function Donate() {
               <div className="flex flex-wrap gap-4">
                 <label className="flex cursor-pointer items-center gap-2 text-[13.5px]">
                   <Radio name="freq" checked={!recurring} onChange={() => setRecurring(false)} />
-                  One-time gift
+                  One-time Donation
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 text-[13.5px]">
                   <Radio name="freq" checked={recurring} onChange={() => setRecurring(true)} />
-                  Recurring gift
+                  Recurring Donation
                 </label>
               </div>
 
@@ -216,7 +216,7 @@ export default function Donate() {
         </div>
 
         <Card className="sticky top-6 p-5">
-          <h3 className="font-serif text-[18px]">Your gift</h3>
+          <h3 className="font-serif text-[18px]">Your Donation</h3>
           <dl className="mt-3 space-y-2.5 text-[13.5px]">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted">Fund</dt>

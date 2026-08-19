@@ -38,7 +38,7 @@ export function HeroBanner({ next, className }: { next?: TempleEvent; className?
 
         <h1 className="font-serif text-[38px] leading-[1.08] text-white [text-shadow:0_2px_24px_rgba(40,5,3,.7)] sm:text-[56px]">
           Sri Meenakshi
-          <span className="mt-1 block text-saffron-200">Devasthanam</span>
+          <span className="mt-1 block text-saffron-200">Temple Society</span>
         </h1>
 
         <p className="max-w-lg text-[15.5px] leading-relaxed text-white/90 [text-shadow:0_1px_10px_rgba(40,5,3,.85)]">
