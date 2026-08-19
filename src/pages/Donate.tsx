@@ -69,7 +69,7 @@ export default function Donate() {
           { label: 'Method', value: titleCase(done.paymentMethod) },
           ...(done.dedicatedTo ? [{ label: 'Dedicated to', value: done.dedicatedTo }] : []),
         ]}
-        emailSubject={`Your ${money(done.amount)} Donation to Sri Meenakshi Devasthanam`}
+        emailSubject={`Your ${money(done.amount)} Donation to Sri Meenakshi Temple Society`}
         emailBody={
           <>
             <p>Dear {user.name},</p>

@@ -21,7 +21,7 @@ export function Footer() {
             <Logo size={42} onDark />
             <div>
               <p className="font-serif text-[19px] leading-tight text-saffron-200">
-                Sri Meenakshi Devasthanam
+                Sri Meenakshi Temple Society
               </p>
               <p className="text-[10.5px] uppercase tracking-[0.18em] text-brand-100/70">
                 Pearland · Texas
@@ -94,7 +94,7 @@ export function Footer() {
       <div className="border-t border-brand-100/15">
         <div className="mx-auto flex max-w-6xl flex-col gap-1.5 px-6 py-5 text-[12px] text-brand-100/60 md:flex-row md:items-center md:justify-between">
           <p>
-            © {new Date().getFullYear()} Sri Meenakshi Devasthanam · 501(c)(3) non-profit · EIN{' '}
+            © {new Date().getFullYear()} Sri Meenakshi Temple Society · 501(c)(3) non-profit · EIN{' '}
             {TEMPLE_EIN}
           </p>
           {/* <p>Prototype build — no payment is processed and no email is sent.</p> */}

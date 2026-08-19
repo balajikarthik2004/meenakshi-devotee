@@ -171,7 +171,7 @@ export default function BookingFlow() {
               The first occurrence is on {fmtDate(state.startDate, 'EEEE, MMMM d, yyyy')}, and will
               repeat {CADENCE_LABEL[state.cadence].toLowerCase()} for one year.
             </p>
-            <p className="mt-2 text-muted">Sri Meenakshi Devasthanam · Pearland, Texas</p>
+            <p className="mt-2 text-muted">Sri Meenakshi Temple Society · Pearland, Texas</p>
           </>
         }
         actions={
@@ -596,7 +596,7 @@ function OrderSummary({
       </div>
 
       <p className="mt-2 text-[11.5px] leading-relaxed text-muted">
-        Sri Meenakshi Devasthanam is a 501(c)(3) non-profit. Your sponsorship is tax-deductible to
+        Sri Meenakshi Temple Society is a 501(c)(3) non-profit. Your sponsorship is tax-deductible to
         the extent allowed by law.
       </p>
     </Card>

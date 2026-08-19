@@ -139,7 +139,7 @@ export default function CalendarPage() {
                 ) : null}
                 <a
                   href={googleCalendarUrl({
-                    title: `${e.label} — Sri Meenakshi Devasthanam`,
+                    title: `${e.label} — Sri Meenakshi Temple Society`,
                     start: e.date,
                     durationMin: 60,
                     details: e.detail,

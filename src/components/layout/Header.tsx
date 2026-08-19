@@ -54,7 +54,7 @@ export function Header() {
             <span className="leading-tight">
               <span className="block font-serif text-[19px] text-brand-600">Sri Meenakshi</span>
               <span className="block text-[10px] uppercase tracking-[0.18em] text-muted">
-                Devasthanam
+                Temple Society
               </span>
             </span>
           </Link>

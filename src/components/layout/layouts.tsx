@@ -176,7 +176,7 @@ export function AppLayout() {
           {nav}
 
           <p className="mt-auto px-3 pt-6 text-[11px] leading-relaxed text-muted/70">
-            Sri Meenakshi Devasthanam
+            Sri Meenakshi Temple Society
             <br />
             Pearland, Texas
           </p>

@@ -139,10 +139,10 @@ export function NextInYourNameTile({
               </Link>
               <a
                 href={googleCalendarUrl({
-                  title: `${puja.name} — Sri Meenakshi Devasthanam`,
+                  title: `${puja.name} — Sri Meenakshi Temple Society`,
                   start: when,
                   details: names?.length ? `Sankalpam for ${names.join(', ')}` : undefined,
-                  location: 'Sri Meenakshi Devasthanam, Pearland, TX',
+                  location: 'Sri Meenakshi Temple Society, Pearland, TX',
                 })}
                 target="_blank"
                 rel="noreferrer"

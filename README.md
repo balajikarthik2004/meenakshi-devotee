@@ -1,6 +1,6 @@
 # Sri Meenakshi Temple — Devotee App (Prototype)
 
-Prototype for Sri Meenakshi Devasthanam, Pearland TX.
+Prototype for Sri Meenakshi Temple Society, Pearland TX.
 
 ## Local dev
 
@@ -51,7 +51,7 @@ photographic layout rather than a dense one.
   third-party font request and no layout shift on first paint.
 - **Deity photography**: `public/deities/` — public-domain and CC works from Wikimedia
   Commons, resized to WebP. Full attribution in `public/deities/CREDITS.md`. **Replace
-  these with the Devasthanam's own photography before production.**
+  these with the Temple Society's own photography before production.**
 - The homepage hero ships at three widths via `srcset` and is preloaded, because it is
   the LCP element on every first visit.
 

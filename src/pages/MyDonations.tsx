@@ -153,7 +153,7 @@ export default function MyDonations() {
       )}
 
       <Card className="mt-5 p-4 text-[12.5px] leading-relaxed text-muted">
-        Sri Meenakshi Devasthanam is a 501(c)(3) organization. Contributions are deductible to the
+        Sri Meenakshi Temple Society is a 501(c)(3) organization. Contributions are deductible to the
         extent allowed by law; no goods or services were provided in exchange other than intangible
         religious benefits.
       </Card>
