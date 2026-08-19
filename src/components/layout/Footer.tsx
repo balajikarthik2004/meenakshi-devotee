@@ -18,7 +18,7 @@ export function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[1.3fr_1fr_1fr]">
         <div>
           <div className="flex items-center gap-3">
-            <Logo size={42} onDark />
+            <Logo size={42} />
             <div>
               <p className="font-serif text-[19px] leading-tight text-saffron-200">
                 Sri Meenakshi Temple Society
