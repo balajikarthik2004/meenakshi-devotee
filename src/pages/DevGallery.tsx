@@ -35,7 +35,7 @@ export default function DevGallery() {
   const { toast } = useToast()
   const [amount, setAmount] = useState(108)
   const [method, setMethod] = useState<'card' | 'ach' | 'zelle' | 'check' | 'cash'>('card')
-  const [names, setNames] = useState(['Balaji Krishnan'])
+  const [names, setNames] = useState(['Santhosh Kumar'])
   const [members, setMembers] = useState<FamilyMember[]>([
     { name: 'Latha Krishnan', relation: 'spouse', nakshatra: 'Rohini', gothra: 'Bharadwaja' },
   ])
@@ -253,7 +253,7 @@ export default function DevGallery() {
                 <NextInYourNameTile
                   occurrence={OCCURRENCES[0]}
                   puja={PUJA_CATALOG[0]}
-                  names={['Balaji Krishnan']}
+                  names={['Santhosh Kumar']}
                 />
                 <div className="mt-4">
                   <MyPujaTimeline occurrences={OCCURRENCES.slice(0, 3)} />
@@ -276,7 +276,7 @@ export default function DevGallery() {
         <div className="space-y-8">
           <Section title="Tax receipt preview">
             <TaxReceiptPreview
-              donorName="Balaji Krishnan"
+              donorName="Santhosh Kumar"
               donorAddress="4821 Shadow Creek Pkwy, Pearland, TX 77584"
               receiptNo="STMT-2025-USR_0001"
               year={2025}
@@ -308,7 +308,7 @@ export default function DevGallery() {
                 { label: 'Amount paid', value: '$410' },
               ]}
               emailSubject="Your Murugar Puja sponsorship is confirmed"
-              emailBody={<p>Om Namah Shivaya Balaji Krishnan, your sponsorship is confirmed.</p>}
+              emailBody={<p>Om Namah Shivaya Santhosh Kumar, your sponsorship is confirmed.</p>}
               actions={<Button variant="ghost">Back to dashboard</Button>}
             />
           </Section>

@@ -82,7 +82,7 @@ export default function SignUp() {
                 id="su-name"
                 value={form.name}
                 onChange={set('name')}
-                placeholder="Balaji Krishnan"
+                placeholder="Santhosh Kumar"
               />
             </Field>
             <Field label="Email" htmlFor="su-email">
@@ -91,7 +91,7 @@ export default function SignUp() {
                 type="email"
                 value={form.email}
                 onChange={set('email')}
-                placeholder="you@example.com"
+                placeholder="you@gmail.com"
               />
             </Field>
             <Field label="Mobile" htmlFor="su-phone" hint="identity anchor">

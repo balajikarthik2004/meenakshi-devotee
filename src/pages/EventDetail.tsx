@@ -189,7 +189,7 @@ export default function EventDetail() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Balaji Krishnan"
+                    placeholder="Santhosh Kumar"
                   />
                 </Field>
                 <Field label="Email" htmlFor="rsvp-email">
@@ -199,7 +199,7 @@ export default function EventDetail() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                   />
                 </Field>
                 <Field

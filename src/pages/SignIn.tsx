@@ -109,7 +109,7 @@ export default function SignIn() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                   />
                 </Field>
                 <Field label="Password" htmlFor="si-pass" hint="not checked">
