@@ -3,7 +3,6 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import {
   ArrowLeft,
   CalendarDays,
-  Flame,
   HandCoins,
   Heart,
   LayoutDashboard,
