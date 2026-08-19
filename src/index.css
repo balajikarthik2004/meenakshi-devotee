@@ -160,13 +160,17 @@ td {
   background-attachment: fixed;
 }
 
-/* Premium glassmorphism sidebar rail */
+/* Enhanced sidebar rail with matching brand colors (saffron/kumkum) */
 .app-rail {
-  background: rgba(253, 246, 235, 0.65); /* warm translucent tint */
+  background-color: var(--color-bg);
+  background-image: 
+    linear-gradient(180deg, rgba(253, 246, 235, 0.4) 0%, rgba(253, 246, 235, 0.9) 100%),
+    radial-gradient(circle at 50% 0%, rgba(242, 171, 33, 0.2), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(156, 31, 22, 0.08), transparent 50%);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-right: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 1px 0 24px rgba(64, 34, 12, 0.04);
+  border-right: 1px solid var(--color-line);
+  box-shadow: 1px 0 24px rgba(242, 171, 33, 0.06);
 }
 
 /* Display type: Marcellus is small on the body, so headings get a nudge up
