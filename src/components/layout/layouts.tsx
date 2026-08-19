@@ -52,7 +52,7 @@ export function MinimalLayout() {
 const APP_NAV = [
   { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
-  { to: '/puja', label: 'Yearly Puja', Icon: Sparkles },
+  { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
   { to: '/donate', label: 'Donate', Icon: HandCoins },
   { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
