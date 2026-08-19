@@ -97,7 +97,7 @@ export function Footer() {
             © {new Date().getFullYear()} Sri Meenakshi Devasthanam · 501(c)(3) non-profit · EIN{' '}
             {TEMPLE_EIN}
           </p>
-          <p>Prototype build — no payment is processed and no email is sent.</p>
+          {/* <p>Prototype build — no payment is processed and no email is sent.</p> */}
         </div>
       </div>
     </footer>
