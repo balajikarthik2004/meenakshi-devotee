@@ -1,7 +1,14 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from '@/components/ui/toast'
-import { AppLayout, MinimalLayout, PublicLayout, RequireAuth } from '@/components/layout/layouts'
+import {
+  AppLayout,
+  DonorLayout,
+  MinimalLayout,
+  PublicLayout,
+  RequireAuth,
+  RequireDonor,
+} from '@/components/layout/layouts'
 import { ScrollToTop } from '@/components/layout/ScrollToTop'
 import { LoadingSkeleton } from '@/components/shared/states'
 
@@ -20,7 +27,8 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const PujaCatalogue = lazy(() => import('@/pages/PujaCatalogue'))
 const BookingFlow = lazy(() => import('@/pages/BookingFlow'))
 const Donate = lazy(() => import('@/pages/Donate'))
-const MembershipPage = lazy(() => import('@/pages/Membership'))
+// Membership temporarily disabled
+// const MembershipPage = lazy(() => import('@/pages/Membership'))
 const Profile = lazy(() => import('@/pages/Profile'))
 const MyPujas = lazy(() => import('@/pages/MyPujas'))
 const MyDonations = lazy(() => import('@/pages/MyDonations'))
@@ -58,6 +66,17 @@ export default function App() {
               <Route path="/signup" element={<SignUp />} />
             </Route>
 
+            {/* Giving — open to a signed-in devotee and to a guest donor alike.
+                `/donate` asks an unrecognised visitor for their details in place of
+                bouncing them to sign-in; `/my/donations` needs one identity or the
+                other, and `RequireDonor` accepts either. */}
+            <Route element={<DonorLayout />}>
+              <Route path="/donate" element={<Donate />} />
+              <Route element={<RequireDonor />}>
+                <Route path="/my/donations" element={<MyDonations />} />
+              </Route>
+            </Route>
+
             {/* Devotee app */}
             <Route element={<RequireAuth />}>
               <Route element={<AppLayout />}>
@@ -68,11 +87,10 @@ export default function App() {
                 <Route path="/puja/one-time" element={<PujaCatalogue filter="one-time" />} />
                 <Route path="/puja/abhishekam" element={<PujaCatalogue filter="abhishekam" />} />
                 <Route path="/puja/book/:pujaId" element={<BookingFlow />} />
-                <Route path="/donate" element={<Donate />} />
-                <Route path="/membership" element={<MembershipPage />} />
+                {/* Membership temporarily disabled */}
+                {/* <Route path="/membership" element={<MembershipPage />} /> */}
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/my/pujas" element={<MyPujas />} />
-                <Route path="/my/donations" element={<MyDonations />} />
                 <Route path="/my/receipts" element={<MyReceipts />} />
                 <Route path="/facility" element={<Facility />} />
               </Route>

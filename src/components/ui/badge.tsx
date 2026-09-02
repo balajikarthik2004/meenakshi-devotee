@@ -42,12 +42,16 @@ export const Avatar = ({
   initials,
   className,
   tone = 'brand',
+  style,
 }: {
   initials: string
   className?: string
   tone?: 'brand' | 'gold' | 'leaf'
+  /** Lets a caller size the disc from a measurement rather than a Tailwind step. */
+  style?: React.CSSProperties
 }) => (
   <span
+    style={style}
     className={cn(
       'inline-flex size-9 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold text-white',
       tone === 'brand' && 'bg-brand-500',

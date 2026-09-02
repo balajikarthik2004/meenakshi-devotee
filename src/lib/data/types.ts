@@ -1,6 +1,6 @@
 export type UUID = string
 export type ISODate = string
-export type Money = number // USD cents avoided at prototype stage; use whole dollars
+export type Money = number // USD cents avoided at this stage; use whole dollars
 
 export interface Temple {
   id: UUID
@@ -73,6 +73,9 @@ export interface PujaCatalogItem {
 export interface PujaAddOn {
   id: string
   label: string
+  /** One line under the label on the booking step. Lives here so adding an add-on
+   *  does not mean editing a switch in the booking JSX. */
+  blurb: string
   price: Money
 }
 
@@ -111,15 +114,36 @@ export type DonationCategory =
   | 'event'
   | 'other'
 
+/**
+ * Who a gift came from, captured directly rather than through an account.
+ *
+ * A signed-in devotee is identified by `Donation.userId`. A visitor who gives from the
+ * public site has no account to point at, so their own details ride along on the gift.
+ * Email and phone are what later reunites them with it — see `contactMatches` in
+ * `@/lib/donor`.
+ */
+export interface DonorContact {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+}
+
 export interface Donation {
   id: UUID
-  userId: UUID | null // null for anonymous
+  userId: UUID | null // null when the gift came from a guest — see `donor`
+  /** Set when `userId` is null: the guest donor's details, taken at the donation gate. */
+  donor?: DonorContact
   category: DonationCategory
   amount: Money
   isRecurring: boolean
   recurringCadence?: Cadence
   paymentMethod: 'card' | 'ach' | 'zelle' | 'check' | 'cash'
   dedicatedTo?: string
+  /** Set when `category` is `event` — the festival this gift sponsors. */
+  eventId?: UUID
+  /** Labels of the sponsorship items chosen, in the order they are offered. */
+  eventItems?: string[]
   taxReceiptId?: UUID
   createdAt: ISODate
 }
@@ -147,6 +171,8 @@ export interface TempleEvent {
   targetAmount: Money
   collectedAmount: Money
   costs: EventCost[]
+  /** The three named pieces of this festival a devotee can sponsor outright. */
+  sponsorships: EventSponsorship[]
   ticketPrice?: Money
   rsvpCount: number
   status: 'upcoming' | 'ongoing' | 'completed'
@@ -154,6 +180,19 @@ export interface TempleEvent {
 export interface EventCost {
   label: string
   amount: Money
+}
+
+/**
+ * A named piece of a festival a devotee can sponsor — the flowers, the annadanam, the
+ * priests' dakshina. Priced per event, so sponsoring the flowers at Chithirai costs
+ * more than at Rama Navami. Distinct from `costs`, which is the published budget the
+ * temple reports against; these are the items actually offered for sponsorship.
+ */
+export interface EventSponsorship {
+  key: string
+  label: string
+  blurb: string
+  price: Money
 }
 
 export interface FacilityBooking {
@@ -177,15 +216,37 @@ export interface Project {
   notes: string[]
 }
 
+/**
+ * One head of the board-approved annual budget — what the target is actually *for*.
+ * The heads reconcile to the snapshot exactly: `targetAmount` sums to `annualTarget`
+ * and `collectedAmount` sums to `ytdCollected`. The breakdown table asserts this, so
+ * a head that is edited without rebalancing its siblings shows up as a variance row
+ * rather than quietly disagreeing with the headline tiles.
+ */
+export interface TargetAllocation {
+  key: string
+  label: string
+  /** One line on what the head pays for — read directly under the label. */
+  detail: string
+  /** Share of the annual target earmarked for this head. */
+  targetAmount: Money
+  /** Raised against this head so far this year. */
+  collectedAmount: Money
+  /** Disbursed against this head so far this year. */
+  spentAmount: Money
+}
+
 export interface TransparencySnapshot {
   ytdCollected: Money
   annualTarget: Money
   balanceToBreakeven: Money
   achievedPct: number
   updatedAt: ISODate
+  /** Where the annual target goes, largest head first. */
+  allocations: TargetAllocation[]
 }
 
-/* ---- Prototype-only supporting types (not persisted anywhere real) ---- */
+/* ---- Supporting types (not persisted anywhere real) ---- */
 
 export interface RecurringRule {
   id: UUID

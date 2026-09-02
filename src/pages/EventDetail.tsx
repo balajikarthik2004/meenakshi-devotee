@@ -136,7 +136,7 @@ export default function EventDetail() {
                 <ExternalLink className="size-3" />
               </a>
               <Link
-                to={`/donate?category=event&dedicate=${encodeURIComponent(event.title)}`}
+                to={`/donate?category=event&event=${event.id}`}
                 className={buttonVariants({ size: 'sm' })}
               >
                 <HandCoins />
@@ -215,9 +215,7 @@ export default function EventDetail() {
                     >
                       <Minus />
                     </Button>
-                    <span className="w-12 text-center text-[20px] tabular-nums">
-                      {seats}
-                    </span>
+                    <span className="w-12 text-center text-[20px] tabular-nums">{seats}</span>
                     <Button
                       variant="outline"
                       size="icon"
@@ -256,7 +254,7 @@ export default function EventDetail() {
               Published live. Updated nightly · full transparency.
             </p>
             <Link
-              to={`/donate?category=event&dedicate=${encodeURIComponent(event.title)}`}
+              to={`/donate?category=event&event=${event.id}`}
               className={cn(buttonVariants({}), 'mt-4 w-full')}
             >
               Help close the gap

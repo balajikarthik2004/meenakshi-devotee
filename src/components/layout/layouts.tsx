@@ -4,7 +4,7 @@ import {
   ArrowLeft,
   CalendarDays,
   HandCoins,
-  Heart,
+  // Heart, // Membership temporarily disabled
   LayoutDashboard,
   LogOut,
   Menu,
@@ -16,9 +16,13 @@ import {
 import { Header } from './Header'
 import { Footer } from './Footer'
 import { Logo, LogoWordmark } from '@/components/shared/Logo'
-import { Avatar } from '@/components/ui/badge'
+import { getFamilyTree } from '@/lib/data/api'
+import { useAsync } from '@/lib/hooks'
+import { AvatarWithCompletion, profileCompletion } from '@/components/shared/ProfileCompletion'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/lib/store/auth'
+import { useGuestDonorStore } from '@/lib/store/guest'
+import { useProfileSignal } from '@/lib/store/profile'
 import { cn } from '@/lib/utils'
 
 /* -------------------------------------------------------------------- public */
@@ -54,7 +58,8 @@ const APP_NAV = [
   // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
   { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
   { to: '/donate', label: 'Donate', Icon: HandCoins },
-  { to: '/membership', label: 'Membership', Icon: Heart },
+  // Membership temporarily disabled
+  // { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
   { to: '/my/donations', label: 'My Donations', Icon: ReceiptText },
   { to: '/profile', label: 'Profile', Icon: Settings },
@@ -67,11 +72,61 @@ export function RequireAuth() {
   return <Outlet />
 }
 
+/* ------------------------------------------------------------------- giving */
+
+/**
+ * Guards the screens a guest donor may see: their own giving history.
+ *
+ * Weaker than `RequireAuth` on purpose — a visitor who gave their name, email and phone
+ * at the donation gate has earned sight of the gifts *they* made from this browser, and
+ * nothing else. Anyone with neither an account nor a stored contact is sent to the gate
+ * rather than to the sign-in screen, because signing in is not what they came to do.
+ */
+export function RequireDonor() {
+  const user = useAuthStore((s) => s.user)
+  const guest = useGuestDonorStore((s) => s.contact)
+  if (!user && !guest) return <Navigate to="/donate" replace />
+  return <Outlet />
+}
+
+/**
+ * Wraps the giving screens in whichever chrome fits the visitor.
+ *
+ * A signed-in devotee keeps the app rail they navigated from. A guest gets the public
+ * header and footer — dropping them into a dashboard shell with a Sign out button and
+ * links to pages they cannot open would be a worse lie than the redirect it replaced.
+ * The inner container mirrors `AppLayout`'s so the page itself measures the same in both.
+ */
+export function DonorLayout() {
+  const user = useAuthStore((s) => s.user)
+  if (user) return <AppLayout />
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <Header />
+      <main className="animate-fade-in flex-1">
+        <div className="mx-auto max-w-[1080px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <Outlet />
+        </div>
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
 export function AppLayout() {
   const user = useAuthStore((s) => s.user)
   const signOut = useAuthStore((s) => s.signOut)
   const navigate = useNavigate()
   const [mobileNav, setMobileNav] = useState(false)
+
+  // Family members count toward completion, and they live outside the user object.
+  // `familyVersion` is what re-runs this the moment the profile page saves.
+  const familyVersion = useProfileSignal((s) => s.familyVersion)
+  const { data: family } = useAsync(
+    async () => (user ? getFamilyTree(user.id) : null),
+    [user?.id, familyVersion],
+  )
+  const completion = user ? profileCompletion(user, family?.members ?? []) : null
 
   /* On the sand rail the current page is a white card rather than a tinted block —
      the surface underneath is already warm, so a second tint would barely register. */
@@ -136,8 +191,10 @@ export function AppLayout() {
         <Link to="/dashboard">
           <LogoWordmark compact />
         </Link>
-        {user ? (
-          <Avatar initials={user.avatarInitials} className="ml-auto size-8 text-[12px]" />
+        {user && completion ? (
+          <Link to="/profile" className="ml-auto">
+            <AvatarWithCompletion initials={user.avatarInitials} pct={completion.pct} size={32} />
+          </Link>
         ) : null}
       </div>
       {mobileNav ? (
@@ -163,14 +220,25 @@ export function AppLayout() {
             </span>
           </Link>
 
-          {user ? (
-            <div className="mb-4 flex items-center gap-2.5 rounded-[12px] border border-line bg-card p-3 shadow-[var(--shadow-sm)]">
-              <Avatar initials={user.avatarInitials} />
+          {user && completion ? (
+            // The whole block is the link. A devotee who sees an incomplete ring should
+            // be one click from the page that completes it.
+            <Link
+              to="/profile"
+              className="mb-4 flex items-center gap-2.5 rounded-[12px] border border-line bg-card p-3 shadow-[var(--shadow-sm)] transition-colors hover:border-brand-300"
+            >
+              <AvatarWithCompletion initials={user.avatarInitials} pct={completion.pct} size={40} />
               <div className="min-w-0">
                 <p className="truncate text-[13.5px] font-medium">{user.name}</p>
-                <p className="truncate text-[12px] text-muted">{user.city}</p>
+                <p className="truncate text-[12px] text-muted">
+                  {completion.pct === 100 ? (
+                    user.city
+                  ) : (
+                    <span className="text-brand-600">Profile {completion.pct}% complete</span>
+                  )}
+                </p>
               </div>
-            </div>
+            </Link>
           ) : null}
 
           {nav}
@@ -211,7 +279,10 @@ export function PageHeader({
   return (
     <div className={cn('mb-6', className)}>
       {backTo ? (
-        <Link to={backTo} className="mb-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-brand-600 hover:text-brand-700">
+        <Link
+          to={backTo}
+          className="mb-3 inline-flex items-center gap-1.5 text-[13.5px] font-medium text-brand-600 hover:text-brand-700"
+        >
           <ArrowLeft className="size-4" />
           {backLabel}
         </Link>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { CreditCard, Info, Languages, Lock, Save } from 'lucide-react'
+import { Check, CreditCard, Info, Languages, Lock, Save } from 'lucide-react'
 import type { FamilyMember, User } from '@/lib/data/types'
 import { PageHeader } from '@/components/layout/layouts'
 import { FamilyTreeEditor } from '@/components/shared/FamilyTreeEditor'
+import { AvatarWithCompletion, profileCompletion } from '@/components/shared/ProfileCompletion'
 import { LoadingSkeleton } from '@/components/shared/states'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { GOTHRAS, NAKSHATRAS } from '@/lib/data/mock'
 import { getFamilyTree, saveFamilyTree, updateDevotee } from '@/lib/data/api'
+import { LOCAL_KEYS, readLocal, writeLocal } from '@/lib/data/local'
 import { useAuthStore } from '@/lib/store/auth'
 import { useAsync } from '@/lib/hooks'
 import { fmtDate } from '@/lib/utils'
@@ -36,12 +38,11 @@ export default function Profile() {
 
   const [form, setForm] = useState<User>(authUser)
   const [members, setMembers] = useState<FamilyMember[]>([])
-  const [prefs, setPrefs] = useState<Record<string, boolean>>({
-    weekly: true,
-    reminders: true,
-    receipts: true,
-    annual: false,
-  })
+  const DEFAULT_PREFS = { weekly: true, reminders: true, receipts: true, annual: false }
+  // Read once on mount rather than on every render — the value only changes here.
+  const [prefs, setPrefs] = useState<Record<string, boolean>>(() =>
+    readLocal(LOCAL_KEYS.emailPrefs, DEFAULT_PREFS),
+  )
   const [saving, setSaving] = useState(false)
 
   const { data: tree, loading } = useAsync(() => getFamilyTree(authUser.id), [authUser.id])
@@ -49,6 +50,10 @@ export default function Profile() {
   useEffect(() => {
     if (tree) setMembers(tree.members)
   }, [tree])
+
+  // Scored from the form rather than the saved record, so the ring answers "am I done
+  // yet" while the devotee is still filling the page in.
+  const completion = profileCompletion(form, members)
 
   const set = (k: keyof User) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
@@ -61,6 +66,7 @@ export default function Profile() {
       primaryUserId: authUser.id,
       members,
     })
+    writeLocal(LOCAL_KEYS.emailPrefs, prefs)
     setSaving(false)
     toast('Profile saved', { detail: 'Your details are updated across the temple records.' })
   }
@@ -256,40 +262,90 @@ export default function Profile() {
           </Card>
         </div>
 
-        <Card className="sticky top-6 p-5">
-          <div className="flex items-center gap-2">
-            <Info className="size-4 text-brand-500" />
-            <h3 className="font-serif text-[18px]">Why we ask</h3>
-          </div>
-          <ul className="mt-3 space-y-3.5 text-[13px] leading-relaxed text-muted">
-            <li>
-              <strong className="block text-ink">Nakshatra & gothra</strong>
-              Read aloud in every sankalpam. Getting these right matters more than anything else on
-              this page.
-            </li>
-            <li>
-              <strong className="block text-ink">Family tree</strong>
-              Saved names become one-tap options in the booking flow, so you never retype them.
-            </li>
-            <li>
-              <strong className="block text-ink">Address</strong>
-              Used for prasadam-by-post and for your mailed annual tax statement.
-            </li>
-            <li>
-              <strong className="block text-ink">Phone is locked</strong>
-              Your number is the temple’s identity anchor for your household. The office desk can
-              change it after verifying you in person.
-            </li>
-          </ul>
-          <div className="mt-4 border-t border-line pt-3 text-[12.5px] text-muted">
-            <p>
-              Devotee since{' '}
-              <span className="font-medium text-ink">
-                {fmtDate(authUser.createdAt, 'MMMM yyyy')}
-              </span>
-            </p>
-          </div>
-        </Card>
+        <div className="sticky top-6 space-y-5">
+          <Card className="p-5">
+            <div className="flex items-center gap-3.5">
+              <AvatarWithCompletion
+                initials={authUser.avatarInitials}
+                pct={completion.pct}
+                size={56}
+              />
+              <div className="min-w-0">
+                <p className="font-serif text-[18px] leading-tight text-ink">
+                  {completion.pct}% complete
+                </p>
+                <p className="mt-0.5 text-[12.5px] text-muted">
+                  {completion.missing.length === 0
+                    ? 'Everything the temple needs is on file.'
+                    : `${completion.missing.length} ${
+                        completion.missing.length === 1 ? 'item' : 'items'
+                      } left`}
+                </p>
+              </div>
+            </div>
+
+            {/* A ring on its own is decoration. The list is what makes it actionable —
+                it names exactly what is missing, in the order the temple cares about. */}
+            <ul className="mt-4 space-y-1.5 border-t border-line pt-3.5">
+              {completion.missing.map((label) => (
+                <li key={label} className="flex items-center gap-2 text-[13px] text-ink">
+                  <span
+                    className="size-3.5 shrink-0 rounded-full border-[1.5px] border-brand-300"
+                    aria-hidden="true"
+                  />
+                  {label}
+                </li>
+              ))}
+              {completion.done.map((label) => (
+                <li key={label} className="flex items-center gap-2 text-[13px] text-muted">
+                  <Check className="size-3.5 shrink-0 text-leaf-500" aria-hidden="true" />
+                  {label}
+                </li>
+              ))}
+            </ul>
+
+            {completion.missing.length > 0 ? (
+              <p className="mt-3 border-t border-line pt-3 text-[12px] leading-relaxed text-muted">
+                Save the page to update this.
+              </p>
+            ) : null}
+          </Card>
+
+          <Card className="p-5">
+            <div className="flex items-center gap-2">
+              <Info className="size-4 text-brand-500" />
+              <h3 className="font-serif text-[18px]">Why we ask</h3>
+            </div>
+            <ul className="mt-3 space-y-3.5 text-[13px] leading-relaxed text-muted">
+              <li>
+                <strong className="block text-ink">Nakshatra & gothra</strong>
+                Read aloud in every sankalpam. Getting these right matters more than anything else
+                on this page.
+              </li>
+              <li>
+                <strong className="block text-ink">Family tree</strong>
+                Saved names become one-tap options in the booking flow, so you never retype them.
+              </li>
+              <li>
+                <strong className="block text-ink">Address</strong>
+                Used for prasadam-by-post and for your mailed annual tax statement.
+              </li>
+              <li>
+                <strong className="block text-ink">Phone is locked</strong>
+                Your number is the temple’s identity anchor for your household. The office desk can
+                change it after verifying you in person.
+              </li>
+            </ul>
+            <div className="mt-4 border-t border-line pt-3 text-[12.5px] text-muted">
+              <p>
+                Devotee since{' '}
+                <span className="font-medium text-ink">
+                  {fmtDate(authUser.createdAt, 'MMMM yyyy')}
+                </span>
+              </p>
+            </div>
+          </Card>
+        </div>
       </div>
     </>
   )

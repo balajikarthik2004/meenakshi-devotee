@@ -20,8 +20,8 @@ export default function About() {
             <DeityArt deity="Meenakshi" className="h-44 w-full" />
             <div className="space-y-3 p-5 text-[14.5px] leading-relaxed text-muted">
               <p>
-                Sri Meenakshi Temple Society was founded by Tamil families who wanted their children to
-                grow up hearing the same Sanskrit and Tamil verses they had grown up with. What
+                Sri Meenakshi Temple Society was founded by Tamil families who wanted their children
+                to grow up hearing the same Sanskrit and Tamil verses they had grown up with. What
                 began as a small prayer hall on the Pearland prairie is now one of the largest South
                 Indian temples in the United States.
               </p>

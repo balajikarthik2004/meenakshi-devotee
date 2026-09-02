@@ -1,5 +1,6 @@
 import { Banknote, CreditCard, Landmark, Smartphone } from 'lucide-react'
 import type { Donation } from '@/lib/data/types'
+import { ChequeInstructions } from '@/components/shared/ChequeInstructions'
 import { cn } from '@/lib/utils'
 
 type Method = Donation['paymentMethod']
@@ -56,8 +57,13 @@ export function PaymentMethodPicker({
           </button>
         )
       })}
+      {/* Picking "Check" raises the one question the button cannot answer: where do I
+          send it? Answered here rather than in each calling screen, so any flow that
+          offers the method gets the address for free. */}
+      {value === 'check' ? <ChequeInstructions className="col-span-full" /> : null}
+
       <p className="col-span-full text-[12px] text-muted">
-        Prototype only — no card is charged and no payment processor is contacted.
+        No card is charged and no payment processor is contacted.
       </p>
     </div>
   )

@@ -13,7 +13,7 @@ import { TaxReceiptPreview } from '@/components/shared/TaxReceiptPreview'
 import { FamilyTreeEditor } from '@/components/shared/FamilyTreeEditor'
 import { MockSuccessScreen } from '@/components/shared/MockSuccessScreen'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
-import { RoleBadge, StatusPill, TierBadge } from '@/components/shared/badges'
+import { RoleBadge, StatusPill /*, TierBadge */ } from '@/components/shared/badges'
 import { MyPujaTimeline } from '@/components/devotee/MyPujaTimeline'
 import { NextInYourNameTile } from '@/components/devotee/NextInYourNameTile'
 import { Button } from '@/components/ui/button'
@@ -162,7 +162,12 @@ export default function DevGallery() {
             <SankalpamFieldRepeater
               names={names}
               onChange={setNames}
-              suggestions={['Latha Krishnan', 'Aditya Krishnan']}
+              ownerName="Ravi Krishnan"
+              ownerDetail="Dhanishta · Vashishta"
+              family={[
+                { name: 'Latha Krishnan', relation: 'spouse', nakshatra: 'Rohini', gothra: '' },
+                { name: 'Aditya Krishnan', relation: 'son', nakshatra: 'Ashwini', gothra: '' },
+              ]}
             />
           </Section>
 
@@ -203,9 +208,10 @@ export default function DevGallery() {
               {(['devotee', 'admin', 'board', 'priest'] as const).map((r) => (
                 <RoleBadge key={r} role={r} />
               ))}
-              {(['silver', 'gold', 'platinum'] as const).map((t) => (
+              {/* Membership temporarily disabled */}
+              {/* {(['silver', 'gold', 'platinum'] as const).map((t) => (
                 <TierBadge key={t} tier={t} />
-              ))}
+              ))} */}
               {[
                 'active',
                 'paused',
@@ -304,7 +310,7 @@ export default function DevGallery() {
               reference="bkg_0081"
               rows={[
                 { label: 'Puja', value: 'Murugar Puja' },
-                { label: 'Cadence', value: 'Monthly' },
+                { label: 'How often', value: 'Monthly' },
                 { label: 'Amount paid', value: '$410' },
               ]}
               emailSubject="Your Murugar Puja sponsorship is confirmed"

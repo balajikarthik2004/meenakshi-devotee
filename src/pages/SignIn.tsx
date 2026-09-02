@@ -81,9 +81,7 @@ export default function SignIn() {
           </div>
 
           <h1 className="font-serif text-[28px] leading-tight">Sign in</h1>
-          <p className="mt-1 text-[13.5px] text-muted">
-            Any email or phone number works in this prototype.
-          </p>
+          <p className="mt-1 text-[13.5px] text-muted">Any email or phone number works here.</p>
 
           <Chips
             className="mt-6"
@@ -192,7 +190,7 @@ export default function SignIn() {
           </p>
 
           <div className="mt-8 rounded-[10px] border border-line bg-tint/50 p-3.5 text-[12.5px] leading-relaxed text-muted">
-            <p className="font-medium text-ink">Prototype note</p>
+            <p className="font-medium text-ink">Sign-in note</p>
             <p>
               No credentials are verified. Submitting signs you in as{' '}
               <span className="font-medium text-ink">{DEVOTEES[0]!.name}</span> unless the email or

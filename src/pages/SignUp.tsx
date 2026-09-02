@@ -1,21 +1,31 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Loader2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/input'
 import { Logo } from '@/components/shared/Logo'
 import { DeityArt } from '@/components/shared/DeityArt'
 import { GOTHRAS, NAKSHATRAS, TEMPLE } from '@/lib/data/mock'
+import { registerDevotee } from '@/lib/data/api'
 import { useAuthStore } from '@/lib/store/auth'
+import { useGuestDonorStore } from '@/lib/store/guest'
 
 export default function SignUp() {
   const navigate = useNavigate()
-  const signIn = useAuthStore((s) => s.signIn)
+  const [params] = useSearchParams()
+  const setUser = useAuthStore((s) => s.setUser)
+  const clearContact = useGuestDonorStore((s) => s.clearContact)
   const [busy, setBusy] = useState(false)
+
+  /* A donor arriving from the giving flow has already typed all four of these. Asking
+     again is the quickest way to lose the account they were about to create. */
+  const fromDonation = params.has('email') || params.has('phone')
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
+    firstName: params.get('first') ?? '',
+    lastName: params.get('last') ?? '',
+    email: params.get('email') ?? '',
+    phone: params.get('phone') ?? '',
     city: 'Pearland',
     nakshatra: '',
     gothra: '',
@@ -27,7 +37,11 @@ export default function SignUp() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setBusy(true)
-    await signIn(form.email || form.phone)
+    const user = await registerDevotee(form)
+    setUser(user)
+    // The guest contact has served its purpose — the record it stood in for now exists,
+    // and leaving it behind would keep `useDonorIdentity` juggling two identities.
+    clearContact()
     setBusy(false)
     navigate('/dashboard', { replace: true })
   }
@@ -73,16 +87,33 @@ export default function SignUp() {
 
           <h1 className="font-serif text-[28px] leading-tight">Create a devotee account</h1>
           <p className="mt-1 text-[13.5px] text-muted">
-            Nothing is validated in this prototype — fill in as much or as little as you like.
+            Nothing is validated here — fill in as much or as little as you like.
           </p>
 
+          {fromDonation ? (
+            <Card className="mt-5 border-leaf-500/25 bg-leaf-500/[0.06] p-3.5 text-[13px] leading-relaxed text-ink">
+              We have carried over the details from your donation. Finish here and every gift made
+              with this email or mobile — including that one — moves onto your devotee record.
+            </Card>
+          ) : null}
+
           <form onSubmit={submit} className="mt-6 grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" htmlFor="su-name" className="sm:col-span-2">
+            <Field label="First name" htmlFor="su-first">
               <Input
-                id="su-name"
-                value={form.name}
-                onChange={set('name')}
-                placeholder="Santhosh Kumar"
+                id="su-first"
+                autoComplete="given-name"
+                value={form.firstName}
+                onChange={set('firstName')}
+                placeholder="Santhosh"
+              />
+            </Field>
+            <Field label="Last name" htmlFor="su-last">
+              <Input
+                id="su-last"
+                autoComplete="family-name"
+                value={form.lastName}
+                onChange={set('lastName')}
+                placeholder="Kumar"
               />
             </Field>
             <Field label="Email" htmlFor="su-email">

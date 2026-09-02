@@ -7,8 +7,10 @@
 import type {
   Booking,
   Donation,
+  DonorContact,
   FacilityBooking,
   FamilyTree,
+  ISODate,
   Membership,
   MembershipTier,
   Money,
@@ -41,7 +43,12 @@ import {
   TRANSPARENCY,
   USERS,
 } from './mock'
+import { LOCAL_KEYS, readLocal, writeLocal } from './local'
 import { useAuthStore } from '@/lib/store/auth'
+import { useProfileSignal } from '@/lib/store/profile'
+import { contactMatches, normEmail, normPhone } from '@/lib/donor'
+import type { DonorIdentity } from '@/lib/donor'
+import { initialsOf } from '@/lib/utils'
 
 export const simulateLatency = () => new Promise((r) => setTimeout(r, 150 + Math.random() * 150))
 
@@ -81,6 +88,50 @@ export async function listDevotees(query?: {
     })
 }
 
+/**
+ * Turns a set of contact details into a devotee record.
+ *
+ * The guest flow needs this to mean something: a visitor who gave as a guest and then
+ * accepts "create my account" must end up on their *own* record, not resolved onto a
+ * seeded one. An email or phone the temple already knows returns the existing devotee
+ * instead of opening a duplicate — the same rule `findDonorByContact` reports at the
+ * gate. Gifts they made as a guest still surface, because `listDonationsFor` matches on
+ * contact as well as on id.
+ */
+export async function registerDevotee(input: {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  city?: string
+  nakshatra?: string
+  gothra?: string
+}): Promise<User> {
+  await simulateLatency()
+
+  const existing = USERS.find(
+    (u) => u.role === 'devotee' && contactMatches(u, { email: input.email, phone: input.phone }),
+  )
+  if (existing) return existing
+
+  const name = `${input.firstName} ${input.lastName}`.trim()
+  const user: User = {
+    id: `usr_${String(USERS.length + 1).padStart(4, '0')}`,
+    role: 'devotee',
+    name,
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    city: input.city?.trim() || undefined,
+    country: 'US',
+    nakshatra: input.nakshatra || undefined,
+    gothra: input.gothra || undefined,
+    createdAt: new Date().toISOString(),
+    avatarInitials: initialsOf(name),
+  }
+  USERS.push(user)
+  return user
+}
+
 export async function updateDevotee(id: UUID, patch: Partial<User>): Promise<User> {
   await simulateLatency()
   const u = USERS.find((x) => x.id === id)
@@ -90,6 +141,19 @@ export async function updateDevotee(id: UUID, patch: Partial<User>): Promise<Use
   return u
 }
 
+/**
+ * Family trees the devotee has edited, replayed over the seed on first import so a
+ * saved tree survives a reload. Seeded trees stay untouched until they are edited.
+ */
+function hydrateFamilyTrees() {
+  for (const saved of readLocal<FamilyTree[]>(LOCAL_KEYS.familyTrees, [])) {
+    const i = FAMILY_TREES.findIndex((f) => f.primaryUserId === saved.primaryUserId)
+    if (i >= 0) FAMILY_TREES[i] = saved
+    else FAMILY_TREES.push(saved)
+  }
+}
+hydrateFamilyTrees()
+
 export async function getFamilyTree(userId: UUID): Promise<FamilyTree | null> {
   await simulateLatency()
   return FAMILY_TREES.find((f) => f.primaryUserId === userId) ?? null
@@ -97,9 +161,23 @@ export async function getFamilyTree(userId: UUID): Promise<FamilyTree | null> {
 
 export async function saveFamilyTree(tree: FamilyTree): Promise<FamilyTree> {
   await simulateLatency()
-  const i = FAMILY_TREES.findIndex((f) => f.id === tree.id)
+  // Match on the devotee, not the tree id — the profile page mints `fam_<userId>`
+  // when a devotee has no seeded tree, which would otherwise append a second tree
+  // for the same person the first time they add a relative.
+  const i = FAMILY_TREES.findIndex((f) => f.primaryUserId === tree.primaryUserId)
   if (i >= 0) FAMILY_TREES[i] = tree
   else FAMILY_TREES.push(tree)
+
+  // Persist only the edited trees, not the whole seeded set.
+  const edited = readLocal<FamilyTree[]>(LOCAL_KEYS.familyTrees, []).filter(
+    (f) => f.primaryUserId !== tree.primaryUserId,
+  )
+  writeLocal(LOCAL_KEYS.familyTrees, [...edited, tree])
+
+  // Tell anything deriving state from the tree — the completion ring, for one — that
+  // its copy is now stale.
+  useProfileSignal.getState().bumpFamily()
+
   return tree
 }
 
@@ -215,9 +293,61 @@ export async function setBookingStatus(
 
 /* ---------------------------------------------------------------- donations */
 
+/**
+ * Guest gifts replayed over the seed on first import.
+ *
+ * `DONATIONS` is an in-memory array that resets on reload — harmless for seeded records
+ * nobody can lose, but a gift a visitor made ten minutes ago is the one record they will
+ * come looking for. Mirrored into localStorage on write and read back here, so
+ * `listDonationsFor` can still find it on their next visit.
+ */
+function hydrateGuestDonations() {
+  const saved = readLocal<Donation[]>(LOCAL_KEYS.guestDonations, [])
+  for (const d of saved) if (!DONATIONS.some((x) => x.id === d.id)) DONATIONS.unshift(d)
+  DONATIONS.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+hydrateGuestDonations()
+
 export async function listDonations(userId?: UUID): Promise<Donation[]> {
   await simulateLatency()
   return DONATIONS.filter((d) => (userId ? d.userId === userId : true))
+}
+
+/**
+ * Every gift belonging to whoever is giving — by account where there is one, and by
+ * contact details either way.
+ *
+ * The contact pass is what makes the guest flow worth anything: it reunites a visitor
+ * with gifts made before they had an account, and it means a devotee who signs up after
+ * giving as a guest finds that gift waiting in their statement rather than orphaned.
+ */
+export async function listDonationsFor(identity: DonorIdentity): Promise<Donation[]> {
+  await simulateLatency()
+  return DONATIONS.filter(
+    (d) =>
+      (identity.userId !== null && d.userId === identity.userId) ||
+      contactMatches(d.donor, identity.contact),
+  ).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/**
+ * The devotee account behind an email or phone, if the temple already has one.
+ *
+ * The gate calls this to offer "you already have an account — sign in instead" rather
+ * than quietly opening a second, contactless record for somebody who is already a
+ * devotee. It reports only that a match exists; it never signs anybody in.
+ */
+export async function findDonorByContact(contact: {
+  email?: string
+  phone?: string
+}): Promise<User | null> {
+  await simulateLatency()
+  const email = normEmail(contact.email ?? '')
+  const phone = normPhone(contact.phone ?? '')
+  if (!email && phone.length < 10) return null
+  return (
+    USERS.find((u) => u.role === 'devotee' && contactMatches(u, { email, phone })) ?? null
+  )
 }
 
 export async function createDonation(
@@ -232,7 +362,48 @@ export async function createDonation(
     createdAt: new Date().toISOString(),
   }
   DONATIONS.unshift(donation)
+
+  // A guest gift has no seeded record to fall back on — see `hydrateGuestDonations`.
+  if (!donation.userId && donation.donor) {
+    writeLocal(LOCAL_KEYS.guestDonations, [
+      donation,
+      ...readLocal<Donation[]>(LOCAL_KEYS.guestDonations, []),
+    ])
+  }
+
+  // An event sponsorship is money raised *for that festival*, so it moves the festival's
+  // break-even meter as well as landing in the ledger. Without this the devotee sponsors
+  // the flowers and the event page still reads the same figure it did a moment ago.
+  if (donation.eventId) {
+    const event = EVENTS.find((e) => e.id === donation.eventId)
+    if (event) event.collectedAmount += donation.amount
+  }
+
   return donation
+}
+
+/**
+ * What a returning visitor has given before, keyed only on contact details.
+ *
+ * Shown at the gate the moment they finish typing their email or phone, so the
+ * recognition is visible *before* they commit to a second gift.
+ */
+export async function getGivingSummaryForContact(contact: DonorContact): Promise<{
+  count: number
+  total: Money
+  lastGiftAt: ISODate | null
+}> {
+  await simulateLatency()
+  const account = USERS.find((u) => u.role === 'devotee' && contactMatches(u, contact))
+  const mine = DONATIONS.filter(
+    (d) =>
+      (account && d.userId === account.id) || contactMatches(d.donor, contact),
+  )
+  return {
+    count: mine.length,
+    total: mine.reduce((s, d) => s + d.amount, 0),
+    lastGiftAt: mine.map((d) => d.createdAt).sort().at(-1) ?? null,
+  }
 }
 
 export async function issueTaxReceipts(ids: UUID[]): Promise<number> {

@@ -6,7 +6,8 @@ import { DAILY_SCHEDULE, TEMPLE, TEMPLE_EIN } from '@/lib/data/mock'
 const LINKS = [
   { to: '/puja', label: 'Sponsor a puja' },
   { to: '/donate', label: 'Make a donation' },
-  { to: '/membership', label: 'Membership' },
+  // Membership temporarily disabled
+  // { to: '/membership', label: 'Membership' },
   { to: '/facility', label: 'Book the hall' },
   { to: '/events', label: 'Festivals' },
   { to: '/about', label: 'About the temple' },
@@ -97,7 +98,7 @@ export function Footer() {
             © {new Date().getFullYear()} Sri Meenakshi Temple Society · 501(c)(3) non-profit · EIN{' '}
             {TEMPLE_EIN}
           </p>
-          {/* <p>Prototype build — no payment is processed and no email is sent.</p> */}
+          {/* <p>No payment is processed and no email is sent.</p> */}
         </div>
       </div>
     </footer>

@@ -1,10 +1,13 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Clock, Loader2, Repeat, Sparkles } from 'lucide-react'
-import type { Booking, Cadence, Donation, PujaCatalogItem } from '@/lib/data/types'
+import type { Booking, Cadence, Donation, FamilyMember, PujaCatalogItem } from '@/lib/data/types'
 import { PageHeader } from '@/components/layout/layouts'
 import { DeityArt } from '@/components/shared/DeityArt'
-import { SankalpamFieldRepeater } from '@/components/shared/SankalpamFieldRepeater'
+import {
+  MAX_SANKALPAM_NAMES,
+  SankalpamFieldRepeater,
+} from '@/components/shared/SankalpamFieldRepeater'
 import { PaymentMethodPicker } from '@/components/shared/PaymentMethodPicker'
 import { MockSuccessScreen } from '@/components/shared/MockSuccessScreen'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
@@ -69,7 +72,7 @@ function reducer(s: WizardState, a: Action): WizardState {
 
 const CADENCES: Cadence[] = ['yearly', 'monthly', 'weekly', 'quarterly', 'daily']
 
-const STEPS = ['Confirm puja', 'Cadence', 'Sankalpam', 'Review & pay']
+const STEPS = ['Confirm puja', 'How often', 'Names', 'Review & pay']
 
 /* -------------------------------------------------------------------- page */
 
@@ -91,6 +94,24 @@ export default function BookingFlow() {
   })
   const [processing, setProcessing] = useState(false)
   const [booked, setBooked] = useState<Booking | null>(null)
+
+  // The family saved on the profile fills the sankalpam in automatically. Guarded on
+  // the tree id so it runs once per load and never fights a devotee who has just
+  // removed someone — a re-run would put them straight back.
+  const filled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!family || filled.current === family.id) return
+    filled.current = family.id
+    const extra = family.members.map((m) => m.name).filter((n) => n && !state.names.includes(n))
+    if (extra.length) {
+      dispatch({
+        type: 'names',
+        names: [...state.names, ...extra].slice(0, MAX_SANKALPAM_NAMES),
+      })
+    }
+    // `state.names` is read, not tracked — this must fire on the family arriving only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family])
 
   // Default the cadence to yearly as requested.
   useEffect(() => {
@@ -147,9 +168,9 @@ export default function BookingFlow() {
         rows={[
           { label: 'Puja', value: puja.name },
           { label: 'Deity', value: puja.deity },
-          { label: 'Cadence', value: CADENCE_LABEL[state.cadence] },
+          { label: 'How often', value: CADENCE_LABEL[state.cadence] },
           { label: 'First occurrence', value: fmtDate(state.startDate) },
-          { label: 'Names in sankalpam', value: validNames.join(', ') },
+          { label: 'Names read aloud', value: validNames.join(', ') },
           {
             label: 'Add-ons',
             value: state.addOns.length
@@ -219,7 +240,7 @@ export default function BookingFlow() {
             <StepSankalpam
               names={state.names}
               addOns={state.addOns}
-              suggestions={family?.members.map((m) => m.name) ?? []}
+              family={family?.members ?? []}
               onNames={(n) => dispatch({ type: 'names', names: n })}
               onToggleAddOn={(id) => dispatch({ type: 'toggleAddOn', id })}
             />
@@ -363,8 +384,8 @@ function StepCadence({
       <div>
         <h2 className="font-serif text-[20px]">How often should it be offered?</h2>
         <p className="mt-1 text-[13px] text-muted">
-          The temple recommends {CADENCE_LABEL['yearly'].toLowerCase()} for {puja.name}.
-          Sponsorship covers one year from your start date.
+          The temple recommends {CADENCE_LABEL['yearly'].toLowerCase()} for {puja.name}. Sponsorship
+          covers one year from your start date.
         </p>
       </div>
 
@@ -406,12 +427,12 @@ function StepCadence({
         </p>
         <p className="mt-2 border-t border-line pt-2 text-[13px] text-ink">
           <span className="font-medium">{money(priceForCadence(puja, cadence))}</span>
-          <span className="text-muted"> for the year at this cadence</span>
+          <span className="text-muted"> for the year at this frequency</span>
           {cadence !== puja.defaultCadence ? (
             <span className="text-muted">
               {' '}
               · {money(puja.basePrice)} at the usual{' '}
-              {CADENCE_LABEL[puja.defaultCadence].toLowerCase()} rhythm
+              {CADENCE_LABEL[puja.defaultCadence].toLowerCase()} schedule
             </span>
           ) : null}
         </p>
@@ -439,7 +460,9 @@ function StepCadence({
               <span className="block text-[10.5px] font-semibold uppercase tracking-[0.08em] text-brand-500">
                 {fmtDate(d, 'MMM')}
               </span>
-              <span className="block text-[19px] leading-tight tabular-nums">{fmtDate(d, 'd')}</span>
+              <span className="block text-[19px] leading-tight tabular-nums">
+                {fmtDate(d, 'd')}
+              </span>
               <span className="block text-[11.5px] text-muted">{fmtDate(d, 'EEE')}</span>
             </li>
           ))}
@@ -452,13 +475,13 @@ function StepCadence({
 function StepSankalpam({
   names,
   addOns,
-  suggestions,
+  family,
   onNames,
   onToggleAddOn,
 }: {
   names: string[]
   addOns: string[]
-  suggestions: string[]
+  family: FamilyMember[]
   onNames: (n: string[]) => void
   onToggleAddOn: (id: string) => void
 }) {
@@ -474,7 +497,13 @@ function StepSankalpam({
         </p>
       </div>
 
-      <SankalpamFieldRepeater names={names} onChange={onNames} suggestions={suggestions} />
+      <SankalpamFieldRepeater
+        names={names}
+        onChange={onNames}
+        ownerName={user.name}
+        ownerDetail={[user.nakshatra, user.gothra].filter(Boolean).join(' · ') || undefined}
+        family={family}
+      />
 
       <div className="border-t border-line pt-4">
         <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">
@@ -494,13 +523,7 @@ function StepSankalpam({
               <Checkbox checked={addOns.includes(a.id)} onChange={() => onToggleAddOn(a.id)} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[13.5px] font-medium text-ink">{a.label}</span>
-                <span className="block text-[12px] text-muted">
-                  {a.id === 'prasadam-post' &&
-                    'Vibhuti, kumkum and prasadam posted to your address'}
-                  {a.id === 'birthday-archana' &&
-                    'An extra archana on each family member’s star day'}
-                  {a.id === 'livestream-reminder' && 'An email an hour before each occurrence'}
-                </span>
+                <span className="block text-[12px] text-muted">{a.blurb}</span>
               </span>
               <span className="shrink-0 text-[13.5px] font-medium">
                 {a.price === 0 ? 'Free' : `+${money(a.price)}`}
@@ -560,7 +583,7 @@ function OrderSummary({
           <dd className="font-medium tabular-nums">{money(cadencePrice)}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-muted">Cadence</dt>
+          <dt className="text-muted">How often</dt>
           <dd className="font-medium">{CADENCE_LABEL[cadence]}</dd>
         </div>
         <div className="flex items-baseline justify-between gap-3">
@@ -584,7 +607,7 @@ function OrderSummary({
       {names.length > 0 ? (
         <div className="mt-4 border-t border-line pt-3">
           <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-muted">
-            Sankalpam
+            Names read aloud
           </p>
           <p className="mt-1 text-[13px] leading-relaxed text-ink">{names.join(' · ')}</p>
         </div>
@@ -596,8 +619,8 @@ function OrderSummary({
       </div>
 
       <p className="mt-2 text-[11.5px] leading-relaxed text-muted">
-        Sri Meenakshi Temple Society is a 501(c)(3) non-profit. Your sponsorship is tax-deductible to
-        the extent allowed by law.
+        Sri Meenakshi Temple Society is a 501(c)(3) non-profit. Your sponsorship is tax-deductible
+        to the extent allowed by law.
       </p>
     </Card>
   )
