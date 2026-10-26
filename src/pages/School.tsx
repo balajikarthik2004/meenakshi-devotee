@@ -7,6 +7,7 @@ import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
+import { CALENDAR_CAVEAT, HWP_CALENDAR, nextSession } from '@/lib/data/mock'
 import { getSchoolTerm, listClasses } from '@/lib/data/api'
 import { useAsync } from '@/lib/hooks'
 import {
@@ -51,6 +52,7 @@ export default function School() {
     [classes],
   )
 
+  const upcoming = useMemo(() => nextSession(), [])
   const open = term ? registrationOpen(term) : false
   const windowState = term ? termWindow(term) : 'before'
 
@@ -135,7 +137,15 @@ export default function School() {
 
             <dl className="grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <Fact Icon={GraduationCap} label="Classes" value={`${classes.length} this year`} />
-              <Fact Icon={CalendarDays} label="When" value={term.cadence} />
+              <Fact
+                Icon={CalendarDays}
+                label="Next class"
+                value={
+                  upcoming
+                    ? `${upcoming.label} · ${fmtDate(upcoming.date, 'EEE d MMM')}`
+                    : term.cadence
+                }
+              />
               <Fact Icon={MapPin} label="Where" value="17130 McLean Rd, Pearland" />
             </dl>
           </Card>
@@ -202,10 +212,58 @@ export default function School() {
                 ))
               )}
 
+              {/* The published Sundays, exactly as the school lists them. Not derived
+                  from "alternate Sundays": the real series has a three-week gap in
+                  November and two consecutive classes in December, so a rule would
+                  print a timetable that disagrees with the one handed out at
+                  Orientation. */}
+              <Card className="overflow-hidden">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-line bg-tint/50 px-5 py-3.5">
+                  <h2 className="font-serif text-[18px]">Class calendar</h2>
+                  <span className="text-[12px] text-muted">2026 Fall · Spring dates to follow</span>
+                </div>
+                <ol className="divide-y divide-line">
+                  {HWP_CALENDAR.map((sess) => {
+                    const past = new Date(sess.date).getTime() < Date.now()
+                    const isNext = upcoming?.date === sess.date
+                    return (
+                      <li
+                        key={sess.date}
+                        className={cn(
+                          'flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 px-5 py-2.5 text-[13px]',
+                          isNext && 'bg-saffron-400/[0.09]',
+                          past && !isNext && 'text-muted/70',
+                        )}
+                      >
+                        <span className="font-medium">
+                          {sess.label}
+                          {isNext ? (
+                            <span className="ml-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-brand-600">
+                              Next
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-right">
+                          <span className={cn('tabular-nums', past && !isNext && 'line-through')}>
+                            {fmtDate(sess.date, 'EEEE d MMMM yyyy')}
+                          </span>
+                          {sess.note ? (
+                            <span className="block text-[11.5px] text-brand-600">{sess.note}</span>
+                          ) : null}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ol>
+                <p className="border-t border-line px-5 py-3 text-[12px] leading-relaxed text-muted">
+                  {CALENDAR_CAVEAT}
+                </p>
+              </Card>
+
               <Card className="p-4 text-[12.5px] leading-relaxed text-muted">
-                The Purna Vidya levels are progressive, but a family joining midway is placed by the
-                coordinators after a short assessment — book the level that fits your child’s age
-                and they will confirm it. Questions to{' '}
+                The Purna Vidya classes are progressive, but a family joining midway is placed by
+                the coordinators after a short assessment — book the class that fits your child’s
+                age and they will confirm it. Books are provided at no separate cost. Questions to{' '}
                 <span className="font-medium text-ink">hwp.vhs@smdpearland.org</span>.
               </Card>
             </div>

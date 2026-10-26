@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react'
 import { DeityArt } from '@/components/shared/DeityArt'
+import { eventImageKey } from '@/components/shared/EventCard'
 import { BreakEvenMeter } from '@/components/shared/BreakEvenMeter'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
 import { StatusPill } from '@/components/shared/badges'
@@ -82,8 +83,11 @@ export default function EventDetail() {
       </Link>
 
       <section className="relative overflow-hidden rounded-[14px] border border-line shadow-[var(--shadow-lg)]">
+        {/* The same mapping the cards use. This page had its own two-branch
+            version, so every festival that was not Navaratri — Deepavali and
+            Karthigai Deepam among them — opened under a picture of Meenakshi. */}
         <DeityArt
-          deity={event.title.includes('Navaratri') ? 'Durga' : 'Meenakshi'}
+          deity={eventImageKey(event.title)}
           className="absolute inset-0 h-full w-full"
           label={`${event.title} flyer`}
         />

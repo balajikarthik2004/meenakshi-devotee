@@ -181,8 +181,14 @@ assessment, and the app is not qualified to refuse them.
 The student is not the account holder. Every enrolment carries the child's own name and
 age alongside the guardian's contact, because age is what decides admission.
 
-Seeded from the school's published page: nine Purna Vidya levels, alternate Sundays
-8:45–12:30, Parents' Corner, shloka assembly, chess and seva. The Tamil, Sanskrit and
+Seeded from the school's own pages, including the sub-pages behind the Pages menu —
+the home page summarises the curriculum as nine levels but the Classes Description
+page sets out **eleven named classes** (Beginners 1, Ramayana, Bhagavath Purana,
+Mahabharata in two parts, Values, Isvara, …) and those names are what a parent looks
+for. `HWP_CALENDAR` lists the Fall Sundays exactly as published rather than deriving
+them: the real series has a three-week gap in November and two consecutive classes in
+December, so a fortnightly rule would print a timetable that disagrees with the one
+handed out at Orientation. The Tamil, Sanskrit and
 music classes and **every fee** are placeholders — no fee is published anywhere.
 
 ## UI conventions
