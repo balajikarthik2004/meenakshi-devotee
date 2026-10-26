@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Donation } from '@/lib/data/types'
-import { Coins, Download, FileText, UserRound } from 'lucide-react'
+import { CalendarCheck2, Coins, Download, FileText, UserRound } from 'lucide-react'
 import { PageHeader } from '@/components/layout/layouts'
 import { TaxReceiptPreview } from '@/components/shared/TaxReceiptPreview'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
@@ -12,10 +12,11 @@ import { Select } from '@/components/ui/input'
 import { Dialog } from '@/components/ui/overlay'
 import { Table, TBody, TD, TH, THead, TR, TableWrap } from '@/components/ui/table'
 import { StatTile } from '@/components/shared/StatTile'
-import { EVENT_BY_ID } from '@/lib/data/mock'
-import { listDonationsFor } from '@/lib/data/api'
+import { EVENT_BY_ID, PROJECT_BY_ID } from '@/lib/data/mock'
+import { listDonationsFor, listPledgesFor } from '@/lib/data/api'
 import { signUpHrefFor, useDonorIdentity } from '@/lib/donor'
 import { useAsync } from '@/lib/hooks'
+import { summarisePledges } from '@/lib/pledge'
 import { downloadCSV, fmtDate, money, titleCase } from '@/lib/utils'
 
 /**
@@ -31,6 +32,8 @@ function purposeOf(d: Donation) {
       ? `${event.title} — ${d.eventItems.join(', ')}`
       : `${event.title} sponsorship`
   }
+  const project = d.projectId ? PROJECT_BY_ID.get(d.projectId) : undefined
+  if (project) return d.dedicatedTo ? `${project.title} — ${d.dedicatedTo}` : project.title
   return d.dedicatedTo ?? ''
 }
 
@@ -45,13 +48,17 @@ function purposeOf(d: Donation) {
 export default function MyDonations() {
   const identity = useDonorIdentity()!
   const { data, loading } = useAsync(
-    () => listDonationsFor(identity),
+    () => Promise.all([listDonationsFor(identity), listPledgesFor(identity)]),
     [identity.userId, identity.contact.email, identity.contact.phone],
   )
   const [year, setYear] = useState<number>(new Date().getFullYear())
   const [showReceipt, setShowReceipt] = useState(false)
 
-  const donations = useMemo(() => data ?? [], [data])
+  const donations = useMemo(() => data?.[0] ?? [], [data])
+  /* Promised money is reported beside the history, never inside it. A pledge is not a
+     gift until it is paid, and folding it into a year's total would overstate both the
+     devotee's giving and their deduction. */
+  const pledgeSummary = useMemo(() => summarisePledges(data?.[1] ?? []), [data])
 
   const years = useMemo(() => {
     const set = new Set(donations.map((d) => new Date(d.createdAt).getFullYear()))
@@ -81,6 +88,7 @@ export default function MyDonations() {
         Amount: d.amount,
         Method: titleCase(d.paymentMethod),
         Recurring: d.isRecurring ? d.recurringCadence : 'No',
+        Pledge: d.pledgeId ?? '',
         Purpose: purposeOf(d),
         Receipt: d.taxReceiptId ?? 'pending',
       })),
@@ -157,9 +165,20 @@ export default function MyDonations() {
           sub={`${donations.length} gifts on record`}
         />
         <StatTile
-          label="Recurring gifts"
-          value={donations.filter((d) => d.isRecurring).length}
-          sub="Active standing orders"
+          label="Pledged, not yet given"
+          value={money(pledgeSummary.outstanding)}
+          sub={
+            pledgeSummary.count > 0 ? (
+              <Link to="/my/pledges" className="font-medium text-brand-500 hover:underline">
+                {pledgeSummary.count} {pledgeSummary.count === 1 ? 'pledge' : 'pledges'} open →
+              </Link>
+            ) : (
+              <Link to="/donate?mode=pledge" className="font-medium text-brand-500 hover:underline">
+                Make a pledge →
+              </Link>
+            )
+          }
+          Icon={CalendarCheck2}
           tone="gold"
         />
       </div>
@@ -192,6 +211,14 @@ export default function MyDonations() {
                     {d.isRecurring ? (
                       <Badge variant="gold" className="ml-2">
                         {titleCase(d.recurringCadence ?? 'recurring')}
+                      </Badge>
+                    ) : null}
+                    {/* Saying where a gift came from matters here: without it a pledge
+                        payment looks like a second, unexplained donation beside the
+                        pledge the devotee knows they still owe money on. */}
+                    {d.pledgeId ? (
+                      <Badge variant="neutral" className="ml-2">
+                        Pledge
                       </Badge>
                     ) : null}
                   </TD>

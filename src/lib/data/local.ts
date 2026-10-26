@@ -24,6 +24,31 @@ export const LOCAL_KEYS = {
    * hand it back to them on a later visit. It has to outlive the tab.
    */
   guestDonations: `${NS}:guest-donations`,
+  /**
+   * Pledges, and the instalments settled against them.
+   *
+   * A pledge outlives the session by definition — its whole point is a date months
+   * from now — so an in-memory-only promise would be a promise the app forgets before
+   * it falls due. Seeded pledges store only their changeable parts, replayed over the
+   * seed; a pledge the devotee created is stored whole, since it has no seeded
+   * original to fall back to. Same split as `hydrateApprovals` in the admin console.
+   */
+  pledges: `${NS}:pledges`,
+  /**
+   * Cafeteria orders this browser placed, and their progress.
+   *
+   * The seeded rail is rebuilt from the clock on each load, so it cannot hold a real
+   * order. A devotee standing at the counter with a token is the last person who
+   * should lose their record to a page refresh.
+   */
+  kitchen: `${NS}:kitchen`,
+  /**
+   * Class enrolments made here, and the office decisions taken on them.
+   *
+   * A family that registered for the school year will come back for this record;
+   * the seeded register cannot hold it, so created rows are stored whole.
+   */
+  school: `${NS}:school`,
 } as const
 
 export function readLocal<T>(key: string, fallback: T): T {

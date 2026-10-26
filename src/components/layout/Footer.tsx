@@ -6,10 +6,12 @@ import { DAILY_SCHEDULE, TEMPLE, TEMPLE_EIN } from '@/lib/data/mock'
 const LINKS = [
   { to: '/puja', label: 'Sponsor a puja' },
   { to: '/donate', label: 'Make a donation' },
-  // Membership temporarily disabled
-  // { to: '/membership', label: 'Membership' },
+  { to: '/membership', label: 'Membership' },
   { to: '/facility', label: 'Book the hall' },
   { to: '/events', label: 'Festivals' },
+  { to: '/projects', label: 'Temple projects' },
+  { to: '/kitchen', label: 'Cafeteria' },
+  { to: '/school', label: 'Vedic Heritage School' },
   { to: '/about', label: 'About the temple' },
 ]
 

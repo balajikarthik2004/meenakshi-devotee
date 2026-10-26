@@ -6,22 +6,19 @@ import { PageHeader } from '@/components/layout/layouts'
 import { MockSuccessScreen } from '@/components/shared/MockSuccessScreen'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-// Membership temporarily disabled (only used by the member-discount row)
-// import { Badge } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Field, Input } from '@/components/ui/input'
-import { FACILITIES, FACILITY_ITEMS /*, TIER_BY_KEY */ } from '@/lib/data/mock'
-import { createFacilityBooking /*, getMembership */ } from '@/lib/data/api'
+import { FACILITIES, FACILITY_ITEMS, TIER_BY_KEY } from '@/lib/data/mock'
+import { createFacilityBooking, getMembership } from '@/lib/data/api'
 import { useAuthStore } from '@/lib/store/auth'
-// Membership temporarily disabled (useAsync had no other caller here)
-// import { useAsync } from '@/lib/hooks'
+import { useAsync } from '@/lib/hooks'
 import { cn, fmtDate, money } from '@/lib/utils'
 
 type FacilityKey = FacilityBooking['facility']
 
 export default function Facility() {
   const user = useAuthStore((s) => s.user)!
-  // Membership temporarily disabled
-  // const { data: membership } = useAsync(() => getMembership(user.id), [user.id])
+  const { data: membership } = useAsync(() => getMembership(user.id), [user.id])
 
   const [facility, setFacility] = useState<FacilityKey>('main-hall')
   const [date, setDate] = useState(() => {
@@ -40,13 +37,16 @@ export default function Facility() {
     price: it.price,
   }))
   const subtotal = lines.reduce<number>((s, l) => s + l.qty * l.price, spec.baseRate)
-  // Membership temporarily disabled — no tier discount, so the total is the subtotal.
-  // const discountPct =
-  //   membership?.status === 'active'
-  //     ? (TIER_BY_KEY.get(membership.tier)?.facilityDiscountPct ?? 0)
-  //     : 0
-  // const discount = Math.round((subtotal * discountPct) / 100)
-  const total = subtotal
+  /* Both memberships carry the same booking discount — the senior rate is a lower
+     price for the same membership, not a smaller one — so the figure comes from the
+     tier spec rather than from a conditional here. A lapsed membership earns nothing;
+     the discount is a benefit of being a member now, not of having been one. */
+  const discountPct =
+    membership?.status === 'active'
+      ? (TIER_BY_KEY.get(membership.tier)?.facilityDiscountPct ?? 0)
+      : 0
+  const discount = Math.round((subtotal * discountPct) / 100)
+  const total = subtotal - discount
 
   const book = async () => {
     setBusy(true)
@@ -76,10 +76,9 @@ export default function Facility() {
             label: 'Add-ons',
             value: lines.length ? lines.map((l) => `${l.label} ×${l.qty}`).join(', ') : 'None',
           },
-          // Membership temporarily disabled
-          // ...(discount
-          //   ? [{ label: `Member discount (${discountPct}%)`, value: `−${money(discount)}` }]
-          //   : []),
+          ...(discount
+            ? [{ label: `Member discount (${discountPct}%)`, value: `−${money(discount)}` }]
+            : []),
           { label: 'Estimated total', value: money(done.total) },
         ]}
         emailSubject={`Your ${spec.label} booking request for ${fmtDate(done.date)}`}
@@ -215,8 +214,7 @@ export default function Facility() {
                 <dd className="font-medium tabular-nums">{money(l.qty * l.price)}</dd>
               </div>
             ))}
-            {/* Membership temporarily disabled */}
-            {/* {discount > 0 ? (
+            {discount > 0 ? (
               <div className="flex items-baseline justify-between gap-3 text-leaf-600">
                 <dt className="flex items-center gap-1.5">
                   Member discount
@@ -224,7 +222,7 @@ export default function Facility() {
                 </dt>
                 <dd className="font-medium tabular-nums">−{money(discount)}</dd>
               </div>
-            ) : null} */}
+            ) : null}
           </dl>
 
           <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
@@ -238,15 +236,15 @@ export default function Facility() {
             {busy ? 'Submitting…' : 'Request this date'}
           </Button>
 
-          {/* Membership temporarily disabled */}
-          {/* {discountPct === 0 ? (
+          {discountPct === 0 ? (
             <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
               <Link to="/membership" className="font-medium text-brand-500 hover:underline">
-                Members save 5–15%
+                Members save 10%
               </Link>{' '}
-              on every facility booking.
+              on every facility booking — and the senior citizen rate is{' '}
+              {money(TIER_BY_KEY.get('senior')!.price)} a year.
             </p>
-          ) : null} */}
+          ) : null}
         </Card>
       </div>
     </>

@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
 import {
   ArrowUpRight,
+  CalendarCheck2,
   CalendarDays,
   Coins,
   Download,
   Flame,
-  // Heart, // Membership temporarily disabled
+  Heart,
   ReceiptText,
   Sparkles,
   Wallet,
@@ -15,22 +16,23 @@ import { StatTile } from '@/components/shared/StatTile'
 import { NextInYourNameTile } from '@/components/devotee/NextInYourNameTile'
 import { DeityArt } from '@/components/shared/DeityArt'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
-// Membership temporarily disabled
-// import { StatusPill, TierBadge } from '@/components/shared/badges'
+import { StatusPill, TierBadge } from '@/components/shared/badges'
 import { Avatar } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TBody, TD, TH, THead, TR, TableWrap } from '@/components/ui/table'
 import { buttonVariants } from '@/components/ui/button'
 import {
-  // getMembership, // Membership temporarily disabled
+  getMembership,
   getMyBookings,
   getUpcomingOccurrences,
   listDonations,
   listEvents,
+  listPledges,
 } from '@/lib/data/api'
-import { PUJA_BY_ID } from '@/lib/data/mock'
+import { PUJA_BY_ID, TIER_BY_KEY } from '@/lib/data/mock'
 import { useAuthStore } from '@/lib/store/auth'
 import { useAsync } from '@/lib/hooks'
+import { summarisePledges } from '@/lib/pledge'
 import { cn, fmtDate, money, titleCase } from '@/lib/utils'
 
 /* ------------------------------------------------------------------ helpers */
@@ -91,8 +93,9 @@ export default function Dashboard() {
         getMyBookings(user.id),
         listDonations(user.id),
         getUpcomingOccurrences(user.id, 30),
-        // getMembership(user.id), // Membership temporarily disabled
         listEvents('upcoming'),
+        listPledges(user.id),
+        getMembership(user.id),
       ]),
     [user.id],
   )
@@ -111,8 +114,10 @@ export default function Dashboard() {
     )
   }
 
-  // Membership temporarily disabled — `membership` removed from the tuple above.
-  const [bookings, donations, occurrences, events] = data
+  const [bookings, donations, occurrences, events, pledges, membership] = data
+  // Deliberately apart from `lifetime` below: a promise is not giving. It earns a tile
+  // of its own precisely so it cannot be read as money already given.
+  const pledgeSummary = summarisePledges(pledges)
   const activeBookings = bookings.filter((b) => b.status === 'active')
   const thisYear = new Date().getFullYear()
 
@@ -151,8 +156,7 @@ export default function Dashboard() {
               <Chip label="Nakshatra" value={user.nakshatra ?? '—'} />
               <Chip label="Gothra" value={user.gothra ?? '—'} />
               <Chip label="Member since" value={fmtDate(user.createdAt, 'yyyy')} />
-              {/* Membership temporarily disabled */}
-              {/* {membership ? <TierBadge tier={membership.tier} /> : null} */}
+              {membership ? <TierBadge tier={membership.tier} /> : null}
             </div>
           </div>
         </div>
@@ -177,10 +181,10 @@ export default function Dashboard() {
         className="mb-5"
       />
 
-      {/* Four numbers, not six. Lifetime giving and "upcoming events" were noise here —
-          the first duplicates the YTD figure, the second belongs on the calendar. */}
-      {/* Membership tile is commented out below, so this row runs 3-up (was lg:grid-cols-4). */}
-      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+      {/* Five numbers at most, and the last two only when they say something: the
+          pledge tile appears only if something is outstanding, and lifetime giving
+          stayed out because it duplicates the YTD figure beside it. */}
+      <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           label={`Given in ${thisYear}`}
           value={money(ytd)}
@@ -201,10 +205,24 @@ export default function Dashboard() {
           sub="In the next 30 days"
           Icon={CalendarDays}
         />
-        {/* Membership temporarily disabled */}
-        {/* <StatTile
+        {pledgeSummary.outstanding > 0 ? (
+          <StatTile
+            label="Pledged, not yet given"
+            value={money(pledgeSummary.outstanding)}
+            sub={
+              <Link to="/my/pledges" className="font-medium text-brand-500 hover:underline">
+                {pledgeSummary.dueSoon > 0
+                  ? `${money(pledgeSummary.dueSoon)} due in 30 days →`
+                  : 'View my pledges →'}
+              </Link>
+            }
+            Icon={CalendarCheck2}
+            tone="gold"
+          />
+        ) : null}
+        <StatTile
           label="Membership"
-          value={membership ? titleCase(membership.tier) : 'None'}
+          value={membership ? (TIER_BY_KEY.get(membership.tier)?.label ?? '—') : 'None'}
           sub={
             membership ? (
               <span className="inline-flex items-center gap-1.5">
@@ -213,13 +231,13 @@ export default function Dashboard() {
               </span>
             ) : (
               <Link to="/membership" className="font-medium text-brand-500 hover:underline">
-                Join a tier →
+                Become a member →
               </Link>
             )
           }
           Icon={Heart}
           tone="gold"
-        /> */}
+        />
       </div>
 
       {/* Two columns that flow independently. A short pujas table should not leave a well
@@ -427,13 +445,12 @@ export default function Dashboard() {
                 <Download />
                 Download {thisYear - 1} statement
               </Link>
-              {/* Membership temporarily disabled */}
-              {/* {membership ? (
+              {membership ? (
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-line pt-3.5">
                   <span className="text-[12.5px] text-muted">Your membership</span>
                   <TierBadge tier={membership.tier} />
                 </div>
-              ) : null} */}
+              ) : null}
             </div>
           </Card>
         </div>

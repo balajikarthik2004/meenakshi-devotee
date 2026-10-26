@@ -152,7 +152,10 @@ function buildUsers(): User[] {
       country: 'US',
       nakshatra: pick(r, NAKSHATRAS),
       gothra: pick(r, GOTHRAS),
-      dob: new Date(int(r, 1958, 1996), int(r, 0, 11), int(r, 1, 28)).toISOString(),
+      // Widened past retirement age on purpose: the senior membership is gated on
+      // being 65 or over, and a roll where nobody qualifies makes the concession —
+      // and every eligibility check built on it — impossible to see working.
+      dob: new Date(int(r, 1944, 1996), int(r, 0, 11), int(r, 1, 28)).toISOString(),
       familyTreeId: chance(r, 62) ? id('fam', i + 1) : undefined,
       createdAt: new Date(int(r, 2014, 2025), int(r, 0, 11), int(r, 1, 28)).toISOString(),
       avatarInitials: initialsOf(name),

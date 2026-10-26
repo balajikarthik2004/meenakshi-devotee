@@ -2,15 +2,21 @@ import { useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
+  BookOpen,
+  CalendarCheck2,
   CalendarDays,
+  GraduationCap,
   HandCoins,
-  // Heart, // Membership temporarily disabled
+  HardHat,
+  Heart,
   LayoutDashboard,
   LogOut,
   Menu,
   ReceiptText,
   Settings,
+  ShoppingBasket,
   Sparkles,
+  UtensilsCrossed,
   X,
 } from 'lucide-react'
 import { Header } from './Header'
@@ -58,10 +64,15 @@ const APP_NAV = [
   // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
   { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
   { to: '/donate', label: 'Donate', Icon: HandCoins },
-  // Membership temporarily disabled
-  // { to: '/membership', label: 'Membership', Icon: Heart },
+  { to: '/projects', label: 'Projects', Icon: HardHat },
+  { to: '/kitchen', label: 'Cafeteria', Icon: UtensilsCrossed },
+  { to: '/school', label: 'VHS School', Icon: GraduationCap },
+  { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
   { to: '/my/donations', label: 'My Donations', Icon: ReceiptText },
+  { to: '/my/pledges', label: 'My Pledges', Icon: CalendarCheck2 },
+  { to: '/my/orders', label: 'My Orders', Icon: ShoppingBasket },
+  { to: '/my/classes', label: 'My Classes', Icon: BookOpen },
   { to: '/profile', label: 'Profile', Icon: Settings },
 ]
 
@@ -90,14 +101,19 @@ export function RequireDonor() {
 }
 
 /**
- * Wraps the giving screens in whichever chrome fits the visitor.
+ * Wraps a screen in whichever chrome fits the visitor.
  *
- * A signed-in devotee keeps the app rail they navigated from. A guest gets the public
- * header and footer — dropping them into a dashboard shell with a Sign out button and
+ * Used by every page that is open to a guest *and* reachable from inside the portal:
+ * giving, and the capital projects. A signed-in devotee keeps the app rail they
+ * navigated from — following a link out of the portal and watching the sidebar
+ * disappear reads as having been logged out. A guest gets the public header and
+ * footer, because dropping them into a dashboard shell with a Sign out button and
  * links to pages they cannot open would be a worse lie than the redirect it replaced.
- * The inner container mirrors `AppLayout`'s so the page itself measures the same in both.
+ *
+ * The inner container mirrors `AppLayout`'s, so a page measures the same either way
+ * and needs no width wrapper of its own.
  */
-export function DonorLayout() {
+export function OpenLayout() {
   const user = useAuthStore((s) => s.user)
   if (user) return <AppLayout />
   return (
@@ -112,6 +128,9 @@ export function DonorLayout() {
     </div>
   )
 }
+
+/** The giving screens' name for {@link OpenLayout}; they were its first caller. */
+export const DonorLayout = OpenLayout
 
 export function AppLayout() {
   const user = useAuthStore((s) => s.user)

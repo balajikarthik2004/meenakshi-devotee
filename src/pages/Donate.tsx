@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CalendarDays, HandCoins, Loader2, UserRound } from 'lucide-react'
-import type { Cadence, Donation, DonationCategory, TempleEvent } from '@/lib/data/types'
+import { CalendarCheck2, CalendarDays, HandCoins, Loader2, UserRound } from 'lucide-react'
+import type {
+  Cadence,
+  Donation,
+  DonationCategory,
+  Pledge,
+  PledgeCadence,
+  Project,
+  TempleEvent,
+} from '@/lib/data/types'
 import { PageHeader } from '@/components/layout/layouts'
 import { GuestDonorForm } from '@/components/shared/GuestDonorForm'
 import { AmountPresets } from '@/components/shared/AmountPresets'
@@ -10,19 +18,60 @@ import { PaymentMethodPicker } from '@/components/shared/PaymentMethodPicker'
 import { MockSuccessScreen } from '@/components/shared/MockSuccessScreen'
 import { ChequeInstructions } from '@/components/shared/ChequeInstructions'
 import { TaxReceiptPreview } from '@/components/shared/TaxReceiptPreview'
+import { PledgeSchedule } from '@/components/shared/PledgeSchedule'
+import { ProjectMoneyFlow } from '@/components/shared/ProjectMoneyFlow'
 import { LoadingSkeleton } from '@/components/shared/states'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox, Field, Input, Radio } from '@/components/ui/input'
 import { DONATION_CATEGORIES } from '@/lib/data/mock'
-import { createDonation, listEvents } from '@/lib/data/api'
+import { createDonation, createPledge, listEvents, listProjects } from '@/lib/data/api'
 import type { DonorIdentity } from '@/lib/donor'
 import { signUpHrefFor, useDonorIdentity } from '@/lib/donor'
 import { useGuestDonorStore } from '@/lib/store/guest'
 import { useAsync } from '@/lib/hooks'
+import { isOpenForDonations, stillToRaise } from '@/lib/project'
+import {
+  MAX_INSTALLMENTS,
+  PLEDGE_CADENCES,
+  buildSchedule,
+  dateInputToISO,
+  earliestStart,
+  isoToDateInput,
+  startDatePresets,
+} from '@/lib/pledge'
 import { cn, fmtDate, money, titleCase } from '@/lib/utils'
 
 const CADENCES: Cadence[] = ['monthly', 'quarterly', 'yearly']
+
+/**
+ * The three things a devotee can do with a gift, as one choice.
+ *
+ * "Recurring" and "Pledge" look similar and are not: a recurring gift is money that
+ * leaves today and keeps leaving, and a pledge is money that leaves on a date in the
+ * future and nothing today. Putting them in the same radio group is what makes the
+ * difference visible — the devotee picks between them rather than discovering, after
+ * paying, that they chose the other one.
+ */
+const GIVING_MODES = [
+  { key: 'once', label: 'One-time donation', blurb: 'Paid now, in full.' },
+  { key: 'recurring', label: 'Recurring donation', blurb: 'Paid now, then repeats.' },
+  {
+    key: 'pledge',
+    label: 'Pledge for later',
+    blurb: 'Nothing is charged today. You promise a date.',
+  },
+] as const
+
+type GivingMode = (typeof GIVING_MODES)[number]['key']
+
+/** Default instalment counts — a full year of whichever period was chosen. */
+const DEFAULT_COUNT: Record<PledgeCadence, number> = {
+  'one-time': 1,
+  monthly: 12,
+  quarterly: 4,
+  yearly: 3,
+}
 
 /**
  * The donation screen is reachable without an account.
@@ -49,12 +98,50 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
     (params.get('category') as DonationCategory) ?? 'general-hundi',
   )
   const [amount, setAmount] = useState(Number(params.get('amount')) || 108)
-  const [recurring, setRecurring] = useState(false)
+  const [mode, setMode] = useState<GivingMode>(params.get('mode') === 'pledge' ? 'pledge' : 'once')
   const [cadence, setCadence] = useState<Cadence>('monthly')
   const [dedication, setDedication] = useState(params.get('dedicate') ?? '')
   const [method, setMethod] = useState<Donation['paymentMethod']>('card')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<Donation | null>(null)
+
+  const recurring = mode === 'recurring'
+
+  /* ---------------------------------------------------------------- pledge state */
+
+  const isPledge = mode === 'pledge'
+  const [pledgeCadence, setPledgeCadence] = useState<PledgeCadence>('one-time')
+  const [count, setCount] = useState(1)
+  const [startDate, setStartDate] = useState(() => isoToDateInput(earliestStart().toISOString()))
+  const [note, setNote] = useState('')
+  const [pledged, setPledged] = useState<Pledge | null>(null)
+
+  const presets = useMemo(() => startDatePresets(), [])
+  const minDate = useMemo(() => isoToDateInput(earliestStart().toISOString()), [])
+
+  /** Changing the period changes what a sensible number of instalments is. */
+  const chooseCadence = (c: PledgeCadence) => {
+    setPledgeCadence(c)
+    setCount(DEFAULT_COUNT[c])
+  }
+
+  // The schedule is derived, never held in state: a date the devotee corrects has to
+  // move every row under it, and a stored copy is one more thing that can be stale.
+  const schedule = useMemo(
+    () =>
+      buildSchedule('preview', {
+        startDate: dateInputToISO(startDate),
+        amount,
+        cadence: pledgeCadence,
+        count,
+      }),
+    [startDate, amount, pledgeCadence, count],
+  )
+
+  const pledgeTotal = schedule.reduce((s, i) => s + i.amount, 0)
+
+  /** A pledge dated today is simply a gift, so the gate is the date, not the amount. */
+  const startIsValid = dateInputToISO(startDate) >= dateInputToISO(minDate)
 
   /* --------------------------------------------------- event sponsorship state */
 
@@ -76,9 +163,11 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
     [events, eventId],
   )
 
-  // A festival is a fixed date, so a monthly-repeating sponsorship of one is incoherent.
+  // A festival falls on one fixed date. A monthly-repeating sponsorship of it is
+  // incoherent, and so is a promise to sponsor it after it has happened — so the event
+  // fund takes one-time gifts only, and the whole frequency block is withheld.
   useEffect(() => {
-    if (isEvent) setRecurring(false)
+    if (isEvent) setMode('once')
   }, [isEvent])
 
   // Items belong to the event that offers them; switching festivals clears the ticks
@@ -94,10 +183,51 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
   const chosen = selectedEvent?.sponsorships.filter((o) => picked.includes(o.key)) ?? []
   const itemsSubtotal = chosen.reduce((s, o) => s + o.price, 0)
 
+  /* ------------------------------------------------------ capital project state */
+
+  const isProject = category === 'project'
+
+  // Same reasoning as the event list above: the other funds have no use for this.
+  const { data: projects, loading: projectsLoading } = useAsync(
+    async () => (isProject ? (await listProjects()).filter(isOpenForDonations) : []),
+    [isProject],
+  )
+
+  const [projectId, setProjectId] = useState<string | null>(params.get('project'))
+
+  const selectedProject: Project | undefined = useMemo(
+    () => projects?.find((p) => p.id === projectId),
+    [projects, projectId],
+  )
+
   /** What the devotee actually pays — items plus top-up for an event, else the preset. */
   const total = isEvent ? itemsSubtotal + topUp : amount
 
   const signUpHref = signUpHrefFor(identity.contact)
+
+  /**
+   * Records the promise. No payment is taken and no receipt is issued — that is the
+   * whole difference from `give` below, and the reason the two are separate calls.
+   */
+  const pledge = async () => {
+    setBusy(true)
+    await new Promise((r) => setTimeout(r, 800))
+    const p = await createPledge({
+      userId: identity.userId,
+      donor: identity.isGuest ? identity.contact : undefined,
+      category,
+      projectId: isProject && selectedProject ? selectedProject.id : undefined,
+      amount,
+      cadence: pledgeCadence,
+      startDate: dateInputToISO(startDate),
+      count,
+      dedicatedTo: dedication.trim() || undefined,
+      intendedMethod: method,
+      note: note.trim() || undefined,
+    })
+    setBusy(false)
+    setPledged(p)
+  }
 
   const give = async () => {
     setBusy(true)
@@ -115,9 +245,101 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
       dedicatedTo: dedication.trim() || undefined,
       eventId: isEvent && selectedEvent ? selectedEvent.id : undefined,
       eventItems: isEvent && chosen.length ? chosen.map((o) => o.label) : undefined,
+      projectId: isProject && selectedProject ? selectedProject.id : undefined,
     })
     setBusy(false)
     setDone(d)
+  }
+
+  /**
+   * The pledge receipt — which is not a receipt, and says so.
+   *
+   * Deliberately missing from this screen: `TaxReceiptPreview`. A promise is not a
+   * deductible contribution until it is paid, and a 501(c)(3) acknowledgement printed
+   * today for money that arrives next June would misstate the devotee's own return.
+   * What goes in its place is the schedule and a plain line about when receipts come.
+   */
+  if (pledged) {
+    const total = pledged.installments.reduce((s, i) => s + i.amount, 0)
+    const first = pledged.installments[0]!
+
+    return (
+      <MockSuccessScreen
+        title="Your pledge is recorded"
+        subtitle={`${money(total)} promised to the ${titleCase(pledged.category)} fund. Nothing has been charged today.`}
+        referenceLabel="Pledge"
+        reference={pledged.id}
+        rows={[
+          { label: 'Fund', value: titleCase(pledged.category) },
+          ...(selectedProject ? [{ label: 'Project', value: selectedProject.title }] : []),
+          { label: 'Total pledged', value: money(total) },
+          {
+            label: 'Schedule',
+            value:
+              pledged.cadence === 'one-time'
+                ? `A single payment of ${money(pledged.amount)}`
+                : `${pledged.installments.length} ${pledged.cadence} payments of ${money(pledged.amount)}`,
+          },
+          { label: 'First payment due', value: fmtDate(first.dueDate, 'EEEE, MMMM d, yyyy') },
+          { label: 'Paying by', value: titleCase(pledged.intendedMethod) },
+          { label: 'Charged today', value: money(0) },
+          ...(pledged.dedicatedTo ? [{ label: 'Dedicated to', value: pledged.dedicatedTo }] : []),
+          ...(pledged.note ? [{ label: 'Your note', value: pledged.note }] : []),
+        ]}
+        emailSubject={`Your ${money(total)} pledge to Sri Meenakshi Temple Society`}
+        emailBody={
+          <>
+            <p>Dear {identity.name},</p>
+            <p className="mt-2">
+              Thank you for pledging <strong>{money(total)}</strong> to the{' '}
+              {titleCase(pledged.category)} fund. The first payment of{' '}
+              <strong>{money(first.amount)}</strong> falls due on{' '}
+              {fmtDate(first.dueDate, 'MMMM d, yyyy')}. Nothing has been charged today.
+            </p>
+            <p className="mt-2">
+              You can pay each instalment early, or cancel what is still outstanding, from{' '}
+              <strong>My pledges</strong> at any time. A 501(c)(3) tax receipt is issued for each
+              payment as it arrives — a pledge itself is not deductible until it is paid.
+            </p>
+            {pledged.dedicatedTo ? (
+              <p className="mt-2">
+                This pledge was dedicated: <em>{pledged.dedicatedTo}</em>.
+              </p>
+            ) : null}
+          </>
+        }
+        extra={
+          <>
+            <Card className="p-5">
+              <h3 className="font-serif text-[18px]">Your payment schedule</h3>
+              <PledgeSchedule installments={pledged.installments} className="mt-2" />
+              <p className="mt-3 border-t border-line pt-3 text-[12.5px] leading-relaxed text-muted">
+                Each payment earns its own 501(c)(3) receipt when it arrives. The pledge itself is
+                not a deductible contribution until it is paid.
+              </p>
+            </Card>
+            {pledged.intendedMethod === 'check' ? (
+              <ChequeInstructions reference={pledged.id} />
+            ) : null}
+          </>
+        }
+        actions={
+          <>
+            <Link to="/" className={buttonVariants({ variant: 'ghost' })}>
+              Back to the temple site
+            </Link>
+            {identity.isGuest ? (
+              <Link to={signUpHref} className={buttonVariants({ variant: 'outline' })}>
+                Create my account
+              </Link>
+            ) : null}
+            <Link to="/my/pledges" className={buttonVariants({})}>
+              My pledges
+            </Link>
+          </>
+        }
+      />
+    )
   }
 
   if (done) {
@@ -133,6 +355,7 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
         reference={done.id}
         rows={[
           { label: 'Fund', value: titleCase(done.category) },
+          ...(selectedProject ? [{ label: 'Project', value: selectedProject.title }] : []),
           ...(selectedEvent
             ? [
                 { label: 'Festival', value: selectedEvent.title },
@@ -297,6 +520,72 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
             </div>
           </Card>
 
+          {/* Two of the funds need to know *which* one — a festival, or a building.
+              The project picker leads with each project's funding bar, because "which
+              of these most needs me" is the actual question a devotee is answering
+              here, and a list of titles cannot answer it. */}
+          {isProject ? (
+            <Card className="p-5">
+              <h2 className="font-serif text-[18px]">Which project?</h2>
+              <p className="mt-1 text-[13px] text-muted">
+                Your gift is restricted to the project you choose. Every project publishes what it
+                has raised and what it has spent.
+              </p>
+
+              {projectsLoading ? (
+                <LoadingSkeleton variant="tiles" rows={3} className="mt-3" />
+              ) : projects && projects.length > 0 ? (
+                <div className="mt-3 space-y-2.5">
+                  {(selectedProject ? [selectedProject] : projects).map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      aria-pressed={projectId === p.id}
+                      onClick={() => setProjectId(p.id)}
+                      className={cn(
+                        'block w-full rounded-[10px] border p-3.5 text-left transition-colors active:scale-[.99]',
+                        projectId === p.id
+                          ? 'border-brand-500 bg-brand-500/[0.06] ring-2 ring-brand-500/20'
+                          : 'border-line bg-card hover:border-brand-300',
+                      )}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <span className="text-[14px] font-medium text-ink">{p.title}</span>
+                        <span className="text-[12.5px] text-muted">
+                          {money(stillToRaise(p))} still needed
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[12.5px] leading-snug text-muted">{p.summary}</p>
+                      <ProjectMoneyFlow project={p} compact className="mt-2.5" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-[13.5px] text-muted">
+                  No projects are open for giving right now. Please pick another fund.
+                </p>
+              )}
+
+              {selectedProject ? (
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <button
+                    type="button"
+                    onClick={() => setProjectId(null)}
+                    className="text-[13px] font-medium text-brand-500 hover:underline"
+                  >
+                    Choose a different project
+                  </button>
+                  <Link
+                    to={`/projects/${selectedProject.slug}`}
+                    className="text-[13px] font-medium text-brand-500 hover:underline"
+                  >
+                    See where this project’s money has gone
+                  </Link>
+                </div>
+              ) : null}
+            </Card>
+          ) : null}
+
           {/* The event fund is the one category that needs to know *which* event. Everything
               below appears only once "Event Sponsorship" is the chosen fund. */}
           {isEvent ? (
@@ -409,7 +698,12 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
           ) : null}
 
           <Card className="space-y-4 p-5">
-            <h2 className="font-serif text-[18px]">How much?</h2>
+            {/* For a pledge the figure is per payment, not the whole promise — the
+                total is three fields away, in the summary. Saying which one this box
+                means is cheaper than letting somebody type $1,200 and pledge $14,400. */}
+            <h2 className="font-serif text-[18px]">
+              {isPledge ? 'How much per payment?' : 'How much?'}
+            </h2>
 
             {/* For an event the figure is the sum of the ticked items, so the presets would
                 fight the checkboxes for control of the same number. The devotee still gets a
@@ -469,21 +763,36 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
               <AmountPresets value={amount} onChange={setAmount} />
             )}
 
-            {/* A festival falls on one date, so a monthly-repeating sponsorship of it is
-                incoherent. The choice is simply withheld for this fund. */}
+            {/* A festival falls on one date, so neither a monthly-repeating sponsorship
+                of it nor a promise to sponsor it later is coherent. The whole choice is
+                withheld for this fund rather than offered and then refused. */}
             <div className={cn('border-t border-line pt-4', isEvent && 'hidden')}>
               <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">
-                Frequency
+                When
               </p>
-              <div className="flex flex-wrap gap-4">
-                <label className="flex cursor-pointer items-center gap-2 text-[13.5px]">
-                  <Radio name="freq" checked={!recurring} onChange={() => setRecurring(false)} />
-                  One-time Donation
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-[13.5px]">
-                  <Radio name="freq" checked={recurring} onChange={() => setRecurring(true)} />
-                  Recurring Donation
-                </label>
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {GIVING_MODES.map((m) => (
+                  <label
+                    key={m.key}
+                    className={cn(
+                      'flex cursor-pointer items-start gap-2.5 rounded-[10px] border p-3 transition-colors',
+                      mode === m.key
+                        ? 'border-brand-500 bg-brand-500/[0.06] ring-2 ring-brand-500/20'
+                        : 'border-line bg-card hover:border-brand-300',
+                    )}
+                  >
+                    <Radio
+                      name="freq"
+                      className="mt-0.5"
+                      checked={mode === m.key}
+                      onChange={() => setMode(m.key)}
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-[13.5px] font-medium text-ink">{m.label}</span>
+                      <span className="block text-[12px] leading-snug text-muted">{m.blurb}</span>
+                    </span>
+                  </label>
+                ))}
               </div>
 
               {recurring ? (
@@ -506,6 +815,122 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
                   ))}
                 </div>
               ) : null}
+
+              {/* The pledge plan. Three questions in the order a devotee answers them —
+                  when it starts, whether it repeats, and how many times — with the
+                  schedule they add up to drawn underneath. A date-arithmetic mistake is
+                  invisible as settings and obvious as a list of dates. */}
+              {isPledge ? (
+                <div className="mt-4 space-y-4 rounded-[10px] border border-line bg-tint/40 p-4">
+                  <Field label="First payment" htmlFor="pl-start">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {presets.map((p) => {
+                        const value = isoToDateInput(p.date.toISOString())
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            aria-pressed={startDate === value}
+                            onClick={() => setStartDate(value)}
+                            className={cn(
+                              'rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors',
+                              startDate === value
+                                ? 'border-brand-500 bg-brand-500 text-white'
+                                : 'border-line bg-card text-ink hover:border-brand-300',
+                            )}
+                          >
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                      <Input
+                        id="pl-start"
+                        type="date"
+                        min={minDate}
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="h-9 w-[170px] text-[13.5px]"
+                        aria-label="First payment date"
+                      />
+                    </div>
+                    {!startIsValid ? (
+                      <p className="mt-1.5 text-[12px] text-brand-600">
+                        A pledge falls due in the future. For a gift today, choose One-time donation
+                        above.
+                      </p>
+                    ) : null}
+                  </Field>
+
+                  <Field
+                    label="Repeat"
+                    htmlFor="pl-cadence"
+                    className="border-t border-line pt-3.5"
+                  >
+                    <div className="flex flex-wrap gap-2" id="pl-cadence">
+                      {PLEDGE_CADENCES.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          aria-pressed={pledgeCadence === c}
+                          onClick={() => chooseCadence(c)}
+                          className={cn(
+                            'rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition-colors',
+                            pledgeCadence === c
+                              ? 'border-brand-500 bg-brand-500 text-white'
+                              : 'border-line bg-card text-ink hover:border-brand-300',
+                          )}
+                        >
+                          {c === 'one-time' ? 'Just once' : titleCase(c)}
+                        </button>
+                      ))}
+                    </div>
+                  </Field>
+
+                  {pledgeCadence !== 'one-time' ? (
+                    <Field
+                      label="How many payments"
+                      hint={`up to ${MAX_INSTALLMENTS[pledgeCadence]}`}
+                      htmlFor="pl-count"
+                    >
+                      <Input
+                        id="pl-count"
+                        type="number"
+                        min={1}
+                        max={MAX_INSTALLMENTS[pledgeCadence]}
+                        value={count || ''}
+                        onChange={(e) =>
+                          setCount(
+                            Math.max(
+                              1,
+                              Math.min(
+                                MAX_INSTALLMENTS[pledgeCadence],
+                                Number(e.target.value) || 1,
+                              ),
+                            ),
+                          )
+                        }
+                        className="max-w-[120px] text-[15px]"
+                      />
+                    </Field>
+                  ) : null}
+
+                  <Field label="A note for the temple office" hint="optional" htmlFor="pl-note">
+                    <Input
+                      id="pl-note"
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="After the house sale closes"
+                    />
+                  </Field>
+
+                  <div className="border-t border-line pt-3.5">
+                    <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">
+                      Your schedule
+                    </p>
+                    <PledgeSchedule installments={schedule} />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <Field
@@ -524,7 +949,18 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
           </Card>
 
           <Card className="space-y-3 p-5">
-            <h2 className="font-serif text-[18px]">Payment method</h2>
+            <h2 className="font-serif text-[18px]">
+              {isPledge ? 'How you plan to pay' : 'Payment method'}
+            </h2>
+            {/* Saying this out loud matters more than it looks: the picker below is the
+                same control a devotee has just used to pay for a puja, and without the
+                line they can reasonably read it as a card about to be charged. */}
+            {isPledge ? (
+              <p className="text-[13px] text-muted">
+                Nothing is charged now. This is only what to expect when the first payment falls due
+                — you can pay by another method on the day.
+              </p>
+            ) : null}
             <PaymentMethodPicker
               value={method}
               onChange={setMethod}
@@ -534,7 +970,7 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
         </div>
 
         <Card className="sticky top-6 p-5">
-          <h3 className="font-serif text-[18px]">Your Donation</h3>
+          <h3 className="font-serif text-[18px]">{isPledge ? 'Your pledge' : 'Your Donation'}</h3>
           <dl className="mt-3 space-y-2.5 text-[13.5px]">
             <div className="flex items-baseline justify-between gap-3">
               <dt className="text-muted">Fund</dt>
@@ -544,6 +980,12 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted">Festival</dt>
                 <dd className="max-w-[55%] text-right font-medium">{selectedEvent.title}</dd>
+              </div>
+            ) : null}
+            {selectedProject ? (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted">Project</dt>
+                <dd className="max-w-[55%] text-right font-medium">{selectedProject.title}</dd>
               </div>
             ) : null}
             {chosen.map((o) => (
@@ -562,12 +1004,30 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
               <div className="flex items-baseline justify-between gap-3">
                 <dt className="text-muted">Frequency</dt>
                 <dd className="font-medium">
-                  {recurring ? `Recurring · ${titleCase(cadence)}` : 'One-time'}
+                  {isPledge
+                    ? pledgeCadence === 'one-time'
+                      ? 'Pledge · one payment'
+                      : `Pledge · ${count} ${pledgeCadence}`
+                    : recurring
+                      ? `Recurring · ${titleCase(cadence)}`
+                      : 'One-time'}
                 </dd>
               </div>
             ) : null}
+            {isPledge ? (
+              <>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted">First payment</dt>
+                  <dd className="font-medium">{fmtDate(dateInputToISO(startDate))}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted">Each payment</dt>
+                  <dd className="font-medium tabular-nums">{money(amount)}</dd>
+                </div>
+              </>
+            ) : null}
             <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-muted">Method</dt>
+              <dt className="text-muted">{isPledge ? 'Paying by' : 'Method'}</dt>
               <dd className="font-medium">{titleCase(method)}</dd>
             </div>
             {dedication ? (
@@ -578,15 +1038,55 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
             ) : null}
           </dl>
 
-          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
-            <span className="text-[13.5px] font-medium">Total today</span>
-            <span className="text-[26px] tabular-nums">{money(total)}</span>
-          </div>
+          {/* The two figures a pledge has to keep apart, and the reason this block is
+              not a single "Total". What is promised is the commitment; what is charged
+              today is zero, and a devotee must not have to infer that from the absence
+              of a number. */}
+          {isPledge ? (
+            <div className="mt-4 space-y-2 border-t border-line pt-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13.5px] font-medium">Total pledged</span>
+                <span className="text-[26px] tabular-nums">{money(pledgeTotal)}</span>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[13.5px] text-muted">Charged today</span>
+                <span className="text-[15px] font-medium tabular-nums text-leaf-600">
+                  {money(0)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3">
+              <span className="text-[13.5px] font-medium">Total today</span>
+              <span className="text-[26px] tabular-nums">{money(total)}</span>
+            </div>
+          )}
 
-          <Button size="lg" className="mt-4 w-full" onClick={give} disabled={busy || total < 1}>
-            {busy ? <Loader2 className="animate-spin" /> : <HandCoins />}
-            {busy ? 'Processing…' : `Give ${money(total)}`}
-          </Button>
+          {isPledge ? (
+            <Button
+              size="lg"
+              className="mt-4 w-full"
+              onClick={pledge}
+              disabled={busy || pledgeTotal < 1 || !startIsValid || (isProject && !selectedProject)}
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <CalendarCheck2 />}
+              {busy ? 'Recording…' : `Pledge ${money(pledgeTotal)}`}
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              className="mt-4 w-full"
+              onClick={give}
+              disabled={busy || total < 1 || (isProject && !selectedProject)}
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <HandCoins />}
+              {busy ? 'Processing…' : `Give ${money(total)}`}
+            </Button>
+          )}
+
+          {isProject && !selectedProject ? (
+            <p className="mt-2 text-[12px] text-muted">Choose a project to continue.</p>
+          ) : null}
 
           {/* Says which of the two things is missing rather than leaving a dead button. */}
           {isEvent && total < 1 ? (
@@ -598,9 +1098,11 @@ function DonateForm({ identity }: { identity: DonorIdentity }) {
           ) : null}
 
           <p className="mt-2.5 text-[11.5px] leading-relaxed text-muted">
-            {method === 'check'
-              ? 'Your 501(c)(3) tax receipt is issued once the cheque clears. No goods or services are provided in exchange for your contribution.'
-              : 'A 501(c)(3) tax receipt is issued immediately. No goods or services are provided in exchange for your contribution.'}
+            {isPledge
+              ? 'No payment is taken today and no receipt is issued yet. A 501(c)(3) receipt follows each payment as it arrives — a pledge is deductible only once it is paid.'
+              : method === 'check'
+                ? 'Your 501(c)(3) tax receipt is issued once the cheque clears. No goods or services are provided in exchange for your contribution.'
+                : 'A 501(c)(3) tax receipt is issued immediately. No goods or services are provided in exchange for your contribution.'}
           </p>
         </Card>
       </div>

@@ -13,6 +13,9 @@ const NAV = [
   { to: '/', label: 'Home', end: true },
   { to: '/puja', label: 'Sponsor a Puja' },
   { to: '/events', label: 'Festivals' },
+  { to: '/projects', label: 'Projects' },
+  { to: '/kitchen', label: 'Cafeteria' },
+  { to: '/school', label: 'VHS School' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/about', label: 'About' },
 ]

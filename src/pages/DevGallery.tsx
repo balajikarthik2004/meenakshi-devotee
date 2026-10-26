@@ -13,7 +13,7 @@ import { TaxReceiptPreview } from '@/components/shared/TaxReceiptPreview'
 import { FamilyTreeEditor } from '@/components/shared/FamilyTreeEditor'
 import { MockSuccessScreen } from '@/components/shared/MockSuccessScreen'
 import { EmptyState, LoadingSkeleton } from '@/components/shared/states'
-import { RoleBadge, StatusPill /*, TierBadge */ } from '@/components/shared/badges'
+import { RoleBadge, StatusPill, TierBadge } from '@/components/shared/badges'
 import { MyPujaTimeline } from '@/components/devotee/MyPujaTimeline'
 import { NextInYourNameTile } from '@/components/devotee/NextInYourNameTile'
 import { Button } from '@/components/ui/button'
@@ -208,10 +208,9 @@ export default function DevGallery() {
               {(['devotee', 'admin', 'board', 'priest'] as const).map((r) => (
                 <RoleBadge key={r} role={r} />
               ))}
-              {/* Membership temporarily disabled */}
-              {/* {(['silver', 'gold', 'platinum'] as const).map((t) => (
+              {(['normal', 'senior'] as const).map((t) => (
                 <TierBadge key={t} tier={t} />
-              ))} */}
+              ))}
               {[
                 'active',
                 'paused',
