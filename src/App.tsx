@@ -42,6 +42,7 @@ const MyDonations = lazy(() => import('@/pages/MyDonations'))
 const MyPledges = lazy(() => import('@/pages/MyPledges'))
 const MyReceipts = lazy(() => import('@/pages/MyReceipts'))
 const Facility = lazy(() => import('@/pages/Facility'))
+const MyHalls = lazy(() => import('@/pages/MyHalls'))
 const DevGallery = lazy(() => import('@/pages/DevGallery'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
@@ -122,6 +123,7 @@ export default function App() {
                 <Route path="/my/pujas" element={<MyPujas />} />
                 <Route path="/my/receipts" element={<MyReceipts />} />
                 <Route path="/facility" element={<Facility />} />
+                <Route path="/my/halls" element={<MyHalls />} />
               </Route>
             </Route>
 

@@ -3,6 +3,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react
 import {
   ArrowLeft,
   BookOpen,
+  Building2,
   CalendarCheck2,
   CalendarDays,
   GraduationCap,
@@ -67,12 +68,14 @@ const APP_NAV = [
   { to: '/projects', label: 'Projects', Icon: HardHat },
   { to: '/kitchen', label: 'Cafeteria', Icon: UtensilsCrossed },
   { to: '/school', label: 'VHS School', Icon: GraduationCap },
+  { to: '/facility', label: 'Book a Hall', Icon: Building2 },
   { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
   { to: '/my/donations', label: 'My Donations', Icon: ReceiptText },
   { to: '/my/pledges', label: 'My Pledges', Icon: CalendarCheck2 },
   { to: '/my/orders', label: 'My Orders', Icon: ShoppingBasket },
   { to: '/my/classes', label: 'My Classes', Icon: BookOpen },
+  { to: '/my/halls', label: 'My Hall Bookings', Icon: Building2 },
   { to: '/profile', label: 'Profile', Icon: Settings },
 ]
 

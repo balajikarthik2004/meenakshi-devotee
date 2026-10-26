@@ -7,7 +7,7 @@ const LINKS = [
   { to: '/puja', label: 'Sponsor a puja' },
   { to: '/donate', label: 'Make a donation' },
   { to: '/membership', label: 'Membership' },
-  { to: '/facility', label: 'Book the hall' },
+  { to: '/facility', label: 'Book a hall' },
   { to: '/events', label: 'Festivals' },
   { to: '/projects', label: 'Temple projects' },
   { to: '/kitchen', label: 'Cafeteria' },
