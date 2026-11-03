@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, NavLink, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
+  Award,
   BookOpen,
   Building2,
   CalendarCheck2,
@@ -68,6 +69,7 @@ const APP_NAV = [
   { to: '/projects', label: 'Projects', Icon: HardHat },
   { to: '/kitchen', label: 'Cafeteria', Icon: UtensilsCrossed },
   { to: '/school', label: 'VHS School', Icon: GraduationCap },
+  { to: '/scholarship', label: 'Scholarships', Icon: Award },
   { to: '/facility', label: 'Book a Hall', Icon: Building2 },
   { to: '/membership', label: 'Membership', Icon: Heart },
   { to: '/calendar', label: 'Calendar', Icon: CalendarDays },

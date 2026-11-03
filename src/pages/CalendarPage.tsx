@@ -55,8 +55,11 @@ export default function CalendarPage() {
         .sort((a, b) => a.date.getTime() - b.date.getTime())
     : []
 
+  // No width wrapper of its own: `OpenLayout` supplies one, as it does for every other
+  // page under it. This page carried its own while it sat under `PublicLayout`, which
+  // supplies none — keeping both would double the padding.
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <>
       <PageHeader
         title="Temple calendar"
         subtitle="The weekly rhythm, the festival year, and the pujas offered in your name."
@@ -158,6 +161,6 @@ export default function CalendarPage() {
           </ul>
         )}
       </Sheet>
-    </div>
+    </>
   )
 }

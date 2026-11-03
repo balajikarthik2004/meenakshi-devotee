@@ -16,6 +16,7 @@ const NAV = [
   { to: '/projects', label: 'Projects' },
   { to: '/kitchen', label: 'Cafeteria' },
   { to: '/school', label: 'VHS School' },
+  { to: '/scholarship', label: 'Scholarships' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/about', label: 'About' },
 ]

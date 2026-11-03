@@ -29,6 +29,9 @@ const School = lazy(() => import('@/pages/School'))
 const ClassDetail = lazy(() => import('@/pages/ClassDetail'))
 const MyClasses = lazy(() => import('@/pages/MyClasses'))
 const About = lazy(() => import('@/pages/About'))
+const ApplyMembership = lazy(() => import('@/pages/ApplyMembership'))
+const Scholarship = lazy(() => import('@/pages/Scholarship'))
+const ScholarshipApply = lazy(() => import('@/pages/ScholarshipApply'))
 const SignIn = lazy(() => import('@/pages/SignIn'))
 const SignUp = lazy(() => import('@/pages/SignUp'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
@@ -62,7 +65,6 @@ export default function App() {
             {/* Public */}
             <Route element={<PublicLayout />}>
               <Route path="/" element={<Home />} />
-              <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/events" element={<EventsIndex />} />
               <Route path="/events/:slug" element={<EventDetail />} />
               <Route path="/about" element={<About />} />
@@ -84,6 +86,14 @@ export default function App() {
                 is part of the transparency promise, not something behind a sign-in —
                 but a devotee who reaches it from the sidebar keeps the sidebar. */}
             <Route element={<OpenLayout />}>
+              {/* Both are open to the public — a prospective student or a visitor
+                  checking festival dates has no account — but both are also offered in
+                  the signed-in sidebar. `OpenLayout` renders `AppLayout` when there is
+                  a user, so following the sidebar link no longer drops you out of it.
+                  Under `PublicLayout` they lost the sidebar, which read as the app
+                  logging you out. */}
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/scholarship" element={<Scholarship />} />
               <Route path="/projects" element={<ProjectsIndex />} />
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               {/* A visitor after darshan should be able to order a coffee without
@@ -112,6 +122,8 @@ export default function App() {
             <Route element={<RequireAuth />}>
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/membership/apply" element={<ApplyMembership />} />
+                <Route path="/scholarship/apply" element={<ScholarshipApply />} />
                 <Route path="/puja" element={<PujaCatalogue />} />
                 <Route path="/puja/yearly" element={<PujaCatalogue filter="yearly" />} />
                 <Route path="/puja/monthly" element={<PujaCatalogue filter="monthly" />} />

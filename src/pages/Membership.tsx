@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Info, Loader2, Users } from 'lucide-react'
+import { Award, Check, FileText, Info, Loader2, Users } from 'lucide-react'
 import type { Donation, Membership, MembershipTier } from '@/lib/data/types'
 import { PageHeader } from '@/components/layout/layouts'
 import { TierBadge } from '@/components/shared/badges'
@@ -12,7 +12,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/input'
 import { TIERS, TIER_BY_KEY } from '@/lib/data/mock'
-import { createMembership, getMembership } from '@/lib/data/api'
+import { createMembership, getMembershipStanding } from '@/lib/data/api'
 import { useAuthStore } from '@/lib/store/auth'
 import { useAsync } from '@/lib/hooks'
 import {
@@ -22,9 +22,10 @@ import {
   eligibilityFor,
   priceFor,
   suggestedTier,
+  milestoneFor,
+  tenureWords,
 } from '@/lib/membership'
 import { cn, fmtDate, money } from '@/lib/utils'
-
 /**
  * Two memberships: the standard annual one, and the concessional rate for devotees
  * aged sixty-five and over.
@@ -41,20 +42,25 @@ import { cn, fmtDate, money } from '@/lib/utils'
  */
 export default function MembershipPage() {
   const user = useAuthStore((s) => s.user)!
-  const { data: current, loading, refresh } = useAsync(() => getMembership(user.id), [user.id])
-
+  // Tenure comes from the whole run of terms, not from the one in force — `startDate`
+  // on the current membership is the day they last renewed, which for a long-standing
+  // member is the most misleading date on the record.
+  const {
+    data: standing,
+    loading,
+    refresh,
+  } = useAsync(() => getMembershipStanding(user.id), [user.id])
+  const current = standing?.current ?? null
   const [selected, setSelected] = useState<MembershipTier | null>(null)
   const [familyPlan, setFamilyPlan] = useState(false)
   const [autoRenew, setAutoRenew] = useState(true)
   const [method, setMethod] = useState<Donation['paymentMethod']>('card')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<Membership | null>(null)
-
   const age = ageOn(user.dob)
   const recommended = suggestedTier(user)
   const tierSpec = selected ? TIER_BY_KEY.get(selected)! : null
   const price = tierSpec ? priceFor(tierSpec.price, familyPlan) : 0
-
   const enrol = async () => {
     if (!selected || eligibilityFor(selected, user) !== 'eligible') return
     setBusy(true)
@@ -74,7 +80,6 @@ export default function MembershipPage() {
     setDone(m)
     refresh()
   }
-
   if (done) {
     const spec = TIER_BY_KEY.get(done.tier)!
     return (
@@ -121,14 +126,21 @@ export default function MembershipPage() {
       />
     )
   }
-
   return (
     <>
       <PageHeader
         title="Membership"
         subtitle="Annual membership keeps the lamps lit, the kitchen running and the priests supported."
+        actions={
+          /* Offered to everyone, including existing members — a member may be applying
+             on behalf of a family member, and hiding the route behind "do you already
+             have one?" sends them to the telephone instead. */
+          <Link to="/membership/apply" className={buttonVariants({})}>
+            <FileText />
+            Apply for membership
+          </Link>
+        }
       />
-
       {loading ? (
         <LoadingSkeleton variant="tiles" rows={3} />
       ) : (
@@ -146,12 +158,48 @@ export default function MembershipPage() {
                     {current.status === 'active' ? 'Active' : 'Lapsed'}
                   </Badge>
                 </p>
+                {/* The line the member actually cares about, above the administrative
+                    one. A temple membership is a long relationship and the renewal date
+                    is merely its paperwork; "a member for eleven years" is the fact
+                    worth leading with, and it is the one the record had been quietly
+                    losing on every renewal. */}
+                {standing?.memberSince ? (
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+                    <span className="text-ink">
+                      A member since{' '}
+                      <span className="font-semibold">
+                        {fmtDate(standing.memberSince, 'MMMM yyyy')}
+                      </span>{' '}
+                      — {tenureWords(standing)}
+                    </span>
+                    {milestoneFor(standing.years) ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold-500/[0.14] px-2 py-px text-[11.5px] font-bold text-gold-600">
+                        <Award className="size-3" />
+                        {/* "10+ years", never a bare "10" — it sits inches from the
+                            exact figure and must qualify it rather than contest it. */}
+                        {milestoneFor(standing.years)}+ years
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
                 <p className="mt-1 text-[13px] text-muted">
                   {current.status === 'active' ? 'Renews' : 'Expired'}{' '}
                   {fmtDate(current.endDate, 'MMMM yyyy')} ·{' '}
                   {current.autoRenew ? 'Auto-renew on' : 'Auto-renew off'} ·{' '}
                   {current.familyPlan ? 'Family plan' : 'Individual'}
+                  {standing && standing.terms > 1 ? (
+                    <> · {standing.terms} terms</>
+                  ) : null}
                 </p>
+                {/* Stated rather than hidden. Saying "a member since 2014" to somebody
+                    who let four years go is a claim they would correct you on, and the
+                    unbroken run is the figure any long-service recognition turns on. */}
+                {standing?.hadLapse && standing.continuousSince ? (
+                  <p className="mt-1 text-[12.5px] text-muted">
+                    Continuously since {fmtDate(standing.continuousSince, 'MMMM yyyy')}, after a
+                    break.
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -177,7 +225,6 @@ export default function MembershipPage() {
               </div>
             </Card>
           ) : null}
-
           {/* Said once, plainly, above the cards — rather than left for the devotee to
               work out from a disabled button. */}
           {recommended === 'senior' && !current ? (
@@ -190,7 +237,6 @@ export default function MembershipPage() {
               </p>
             </Card>
           ) : null}
-
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Whichever tier the devotee is entitled to comes first on the page. */}
             {[...TIERS]
@@ -200,7 +246,6 @@ export default function MembershipPage() {
                 const eligible = reason === 'eligible'
                 const isCurrent = current?.tier === t.tier && current.status === 'active'
                 const isSelected = selected === t.tier
-
                 return (
                   <Card
                     key={t.tier}
@@ -223,7 +268,6 @@ export default function MembershipPage() {
                       {money(t.price)}
                       <span className="ml-1 font-sans text-[13px] text-muted">/ year</span>
                     </p>
-
                     <ul className="mt-4 space-y-2">
                       {t.perks.map((p) => (
                         <li key={p} className="flex items-start gap-2 text-[13px] leading-relaxed">
@@ -232,16 +276,32 @@ export default function MembershipPage() {
                         </li>
                       ))}
                     </ul>
-
                     <div className="mt-auto pt-5">
                       {eligible ? (
-                        <Button
-                          className="w-full"
-                          variant={t.tier === recommended ? 'default' : 'ghost'}
-                          onClick={() => setSelected(t.tier)}
-                        >
-                          {isCurrent ? 'Renew this membership' : `Choose ${t.label}`}
-                        </Button>
+                        /* Renewing and applying are different things and go different
+                           ways. A member renewing already belongs — they pay and carry
+                           on, inline, as before. Somebody choosing a membership for the
+                           first time is applying, and an application is a form the
+                           temple office reads and decides on, so it goes there. Sending
+                           both down the same path would either make members re-apply
+                           every year or let a stranger grant themselves a membership. */
+                        isCurrent ? (
+                          <Button className="w-full" onClick={() => setSelected(t.tier)}>
+                            Renew this membership
+                          </Button>
+                        ) : (
+                          <Link
+                            to={`/membership/apply?tier=${t.tier}`}
+                            className={cn(
+                              buttonVariants({
+                                variant: t.tier === recommended ? 'default' : 'ghost',
+                              }),
+                              'w-full',
+                            )}
+                          >
+                            Choose {t.label}
+                          </Link>
+                        )
                       ) : (
                         /* The two reasons get different answers, because one of them
                            the devotee can fix in thirty seconds and the other they
@@ -274,14 +334,12 @@ export default function MembershipPage() {
                 )
               })}
           </div>
-
           {selected && tierSpec ? (
             <Card className="mt-6 space-y-4 p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="font-serif text-[20px]">Checkout — {tierSpec.label}</h2>
                 <span className="text-[24px] tabular-nums">{money(price)}</span>
               </div>
-
               <label className="flex cursor-pointer items-start gap-3 rounded-[10px] border border-line p-3.5 transition-colors hover:border-brand-300">
                 <Checkbox checked={familyPlan} onChange={(e) => setFamilyPlan(e.target.checked)} />
                 <span>
@@ -295,19 +353,16 @@ export default function MembershipPage() {
                   </span>
                 </span>
               </label>
-
               <label className="flex cursor-pointer items-center gap-3 text-[13.5px]">
                 <Checkbox checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
                 Auto-renew next year — we’ll email you two weeks before
               </label>
-
               <div className="border-t border-line pt-4">
                 <p className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">
                   Payment method
                 </p>
                 <PaymentMethodPicker value={method} onChange={setMethod} />
               </div>
-
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line pt-4">
                 <Button variant="outline" onClick={() => setSelected(null)}>
                   Cancel
@@ -319,7 +374,6 @@ export default function MembershipPage() {
               </div>
             </Card>
           ) : null}
-
           <Card className="mt-6 p-4 text-[12.5px] leading-relaxed text-muted">
             Membership runs for one year from the day you join. The senior citizen rate is open to
             devotees aged {SENIOR_MIN_AGE} and over on the day of enrolment and carries the same

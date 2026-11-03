@@ -22,7 +22,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TBody, TD, TH, THead, TR, TableWrap } from '@/components/ui/table'
 import { buttonVariants } from '@/components/ui/button'
 import {
-  getMembership,
+  getMembershipStanding,
   getMyBookings,
   getUpcomingOccurrences,
   listDonations,
@@ -30,6 +30,7 @@ import {
   listPledges,
 } from '@/lib/data/api'
 import { PUJA_BY_ID, TIER_BY_KEY } from '@/lib/data/mock'
+import { tenureWords } from '@/lib/membership'
 import { useAuthStore } from '@/lib/store/auth'
 import { useAsync } from '@/lib/hooks'
 import { summarisePledges } from '@/lib/pledge'
@@ -95,7 +96,7 @@ export default function Dashboard() {
         getUpcomingOccurrences(user.id, 30),
         listEvents('upcoming'),
         listPledges(user.id),
-        getMembership(user.id),
+        getMembershipStanding(user.id),
       ]),
     [user.id],
   )
@@ -114,7 +115,10 @@ export default function Dashboard() {
     )
   }
 
-  const [bookings, donations, occurrences, events, pledges, membership] = data
+  const [bookings, donations, occurrences, events, pledges, standing] = data
+  // Tenure comes from the whole run of terms; `startDate` on the current one is just
+  // the day they last renewed.
+  const membership = standing?.current ?? null
   // Deliberately apart from `lifetime` below: a promise is not giving. It earns a tile
   // of its own precisely so it cannot be read as money already given.
   const pledgeSummary = summarisePledges(pledges)
@@ -225,7 +229,14 @@ export default function Dashboard() {
           value={membership ? (TIER_BY_KEY.get(membership.tier)?.label ?? '—') : 'None'}
           sub={
             membership ? (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex flex-wrap items-center gap-x-1.5">
+                {/* Tenure first: how long they have been with the temple is the part
+                    worth recognising, and the renewal date is its paperwork. */}
+                {standing?.memberSince ? (
+                  <span className="block w-full text-ink">
+                    A member for {tenureWords(standing)}
+                  </span>
+                ) : null}
                 Renews {fmtDate(membership.endDate, 'MMM yyyy')}
                 <StatusPill status={membership.status} />
               </span>

@@ -79,6 +79,7 @@ import { contactMatches, normEmail, normPhone } from '@/lib/donor'
 import type { DonorIdentity } from '@/lib/donor'
 import { initialsOf } from '@/lib/utils'
 import { buildSchedule, derivePledgeStatus } from '@/lib/pledge'
+import { standingFrom, type MembershipStanding } from '@/lib/membership'
 
 export const simulateLatency = () => new Promise((r) => setTimeout(r, 150 + Math.random() * 150))
 
@@ -921,9 +922,72 @@ export async function getMembership(userId: UUID): Promise<Membership | null> {
   )
 }
 
+/**
+ * Every term a devotee has ever held, newest first.
+ *
+ * Needed because tenure cannot be read off the current membership: `startDate` is the
+ * start of the term in force, so a devotee who has renewed nine times looks, from that
+ * one row, like somebody who joined in March. Only the full run answers "how long have
+ * they been with us", which is why this exists beside `getMembership` rather than
+ * being folded into it.
+ */
+export async function getMembershipHistory(userId: UUID): Promise<Membership[]> {
+  await simulateLatency()
+  return MEMBERSHIPS.filter((m) => m.userId === userId).sort((a, b) =>
+    b.endDate.localeCompare(a.endDate),
+  )
+}
+
+/** Tenure for one devotee, computed from their whole run of terms. */
+export async function getMembershipStanding(userId: UUID): Promise<MembershipStanding> {
+  await simulateLatency()
+  return standingFrom(MEMBERSHIPS.filter((m) => m.userId === userId))
+}
+
+/**
+ * The register: one row per member, not one per term.
+ *
+ * `MEMBERSHIPS` now holds a devotee's whole run of renewals, so returning it whole
+ * would list a nine-year member nine times and quietly inflate every count on the
+ * screen above it. The register wants the term in force; the history behind it is
+ * reached through `getMembershipHistory`.
+ */
 export async function listMemberships(): Promise<Membership[]> {
   await simulateLatency()
-  return [...MEMBERSHIPS].sort((a, b) => a.endDate.localeCompare(b.endDate))
+  const current = new Map<UUID, Membership>()
+  for (const m of MEMBERSHIPS) {
+    const held = current.get(m.userId)
+    if (!held || m.endDate > held.endDate) current.set(m.userId, m)
+  }
+  return [...current.values()].sort((a, b) => a.endDate.localeCompare(b.endDate))
+}
+
+/**
+ * The register with tenure attached.
+ *
+ * One pass over the whole table rather than a `getMembershipStanding` per row: the
+ * register is twenty-six members today and would be several hundred in a live temple,
+ * and a per-row await there is the kind of thing that is invisible in a mock layer and
+ * unbearable the moment it becomes a real query.
+ */
+export async function listMembershipStandings(): Promise<
+  { membership: Membership; standing: MembershipStanding }[]
+> {
+  await simulateLatency()
+  const byUser = new Map<UUID, Membership[]>()
+  for (const m of MEMBERSHIPS) {
+    const list = byUser.get(m.userId) ?? []
+    list.push(m)
+    byUser.set(m.userId, list)
+  }
+
+  return [...byUser.values()]
+    .map((history) => {
+      const standing = standingFrom(history)
+      return { membership: standing.current!, standing }
+    })
+    .filter((r) => r.membership)
+    .sort((a, b) => a.membership.endDate.localeCompare(b.membership.endDate))
 }
 
 export async function createMembership(
