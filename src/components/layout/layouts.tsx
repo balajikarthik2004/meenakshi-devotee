@@ -13,6 +13,7 @@ import {
   Heart,
   LayoutDashboard,
   LogOut,
+  type LucideIcon,
   Menu,
   ReceiptText,
   Settings,
@@ -61,24 +62,56 @@ export function MinimalLayout() {
 
 /* ---------------------------------------------------------------------- app */
 
-const APP_NAV = [
-  { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
-  // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
-  { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
-  { to: '/donate', label: 'Donate', Icon: HandCoins },
-  { to: '/projects', label: 'Projects', Icon: HardHat },
-  { to: '/kitchen', label: 'Cafeteria', Icon: UtensilsCrossed },
-  { to: '/school', label: 'VHS School', Icon: GraduationCap },
-  { to: '/scholarship', label: 'Scholarships', Icon: Award },
-  { to: '/facility', label: 'Book a Hall', Icon: Building2 },
-  { to: '/membership', label: 'Membership', Icon: Heart },
-  { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
-  { to: '/my/donations', label: 'My Donations', Icon: ReceiptText },
-  { to: '/my/pledges', label: 'My Pledges', Icon: CalendarCheck2 },
-  { to: '/my/orders', label: 'My Orders', Icon: ShoppingBasket },
-  { to: '/my/classes', label: 'My Classes', Icon: BookOpen },
-  { to: '/my/halls', label: 'My Hall Bookings', Icon: Building2 },
-  { to: '/profile', label: 'Profile', Icon: Settings },
+type NavItem = { to: string; label: string; Icon: LucideIcon }
+
+/**
+ * The sidebar, in four groups rather than one column of sixteen links.
+ *
+ * Sixteen equal-weight rows made every destination cost the same glance, so finding
+ * "My Pledges" meant reading the whole rail. The groups answer a different question
+ * each: where am I, what can I offer, what does the temple run, and what have I
+ * already done. The last group drops the "My " prefix every label carried — the
+ * heading says it once, and five repetitions of a word is five words of noise.
+ *
+ * `Building2` appears twice on purpose: booking a hall and the record of a hall you
+ * booked are the same subject, and the same icon is how that reads at a glance.
+ */
+const APP_NAV: { heading?: string; items: NavItem[] }[] = [
+  {
+    items: [
+      { to: '/dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+      { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
+    ],
+  },
+  {
+    heading: 'Worship & giving',
+    items: [
+      // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
+      { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
+      { to: '/donate', label: 'Donate', Icon: HandCoins },
+      { to: '/projects', label: 'Projects', Icon: HardHat },
+      { to: '/membership', label: 'Membership', Icon: Heart },
+    ],
+  },
+  {
+    heading: 'Temple services',
+    items: [
+      { to: '/kitchen', label: 'Cafeteria', Icon: UtensilsCrossed },
+      { to: '/facility', label: 'Book a Hall', Icon: Building2 },
+      { to: '/school', label: 'VHS School', Icon: GraduationCap },
+      { to: '/scholarship', label: 'Scholarships', Icon: Award },
+    ],
+  },
+  {
+    heading: 'My activity',
+    items: [
+      { to: '/my/donations', label: 'Donations', Icon: ReceiptText },
+      { to: '/my/pledges', label: 'Pledges', Icon: CalendarCheck2 },
+      { to: '/my/orders', label: 'Orders', Icon: ShoppingBasket },
+      { to: '/my/classes', label: 'Classes', Icon: BookOpen },
+      { to: '/my/halls', label: 'Hall Bookings', Icon: Building2 },
+    ],
+  },
 ]
 
 export function RequireAuth() {
@@ -156,47 +189,67 @@ export function AppLayout() {
      the surface underneath is already warm, so a second tint would barely register. */
   const navItem = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'group relative flex items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-[13.5px] font-medium transition-all duration-200',
+      'group relative flex items-center gap-2.5 rounded-[12px] px-3 py-2 text-[13.5px] font-medium transition-all duration-200',
       isActive
         ? 'bg-gradient-to-r from-white to-white/60 text-brand-700 shadow-sm ring-1 ring-saffron-400/20'
         : 'text-muted hover:bg-white/40 hover:text-brand-900 hover:translate-x-0.5',
     )
 
+  const renderItem = ({ to, label, Icon }: NavItem) => (
+    <NavLink
+      key={to}
+      to={to}
+      end={to === '/puja'}
+      onClick={() => setMobileNav(false)}
+      className={navItem}
+    >
+      {({ isActive }) => (
+        <>
+          {isActive ? (
+            <span
+              aria-hidden
+              className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-saffron-400"
+            />
+          ) : null}
+          <Icon className="size-4 shrink-0" />
+          {label}
+        </>
+      )}
+    </NavLink>
+  )
+
   const nav = (
-    <nav className="flex flex-col gap-0.5">
-      {APP_NAV.map(({ to, label, Icon }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === '/puja'}
-          onClick={() => setMobileNav(false)}
-          className={navItem}
-        >
-          {({ isActive }) => (
-            <>
-              {isActive ? (
-                <span
-                  aria-hidden
-                  className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-saffron-400"
-                />
-              ) : null}
-              <Icon className="size-4 shrink-0" />
-              {label}
-            </>
-          )}
-        </NavLink>
+    <nav className="flex flex-col">
+      {APP_NAV.map((group, i) => (
+        <div key={group.heading ?? 'top'} className={i === 0 ? undefined : 'mt-4'}>
+          {group.heading ? (
+            // Labelled as a group, not as a link: no hover, no pointer, and dimmer
+            // than the rows under it so the eye lands on a destination first.
+            <p className="mb-1 select-none px-3 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-muted/70">
+              {group.heading}
+            </p>
+          ) : null}
+          <div className="flex flex-col gap-0.5">{group.items.map(renderItem)}</div>
+        </div>
       ))}
-      <button
-        type="button"
-        onClick={() => {
-          signOut()
-          navigate('/')
-        }}
-        className="group mt-1 flex items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left text-[13.5px] font-medium text-muted transition-all duration-200 hover:bg-white/40 hover:text-brand-900 hover:translate-x-0.5"
-      >
-        <LogOut className="size-4 shrink-0" />
-        Sign out
-      </button>
+
+      {/* Your account, kept apart from the temple's pages by a rule. Sign out lives
+          here rather than loose at the foot of the list, where it sat one stray click
+          below "My Hall Bookings". */}
+      <div className="mt-4 flex flex-col gap-0.5 border-t border-line/70 pt-3">
+        {renderItem({ to: '/profile', label: 'Profile', Icon: Settings })}
+        <button
+          type="button"
+          onClick={() => {
+            signOut()
+            navigate('/')
+          }}
+          className="group flex items-center gap-2.5 rounded-[12px] px-3 py-2 text-left text-[13.5px] font-medium text-muted transition-all duration-200 hover:bg-white/40 hover:text-brand-900 hover:translate-x-0.5"
+        >
+          <LogOut className="size-4 shrink-0" />
+          Sign out
+        </button>
+      </div>
     </nav>
   )
 
