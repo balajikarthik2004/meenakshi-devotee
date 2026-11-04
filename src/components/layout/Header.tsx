@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Clock, LogOut, MapPin, Menu, Phone, UserRound, X } from 'lucide-react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, Clock, LogOut, MapPin, Menu, Phone, UserRound, X } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { Avatar } from '@/components/ui/badge'
 import { MenuItem, Popover } from '@/components/ui/overlay'
@@ -9,16 +9,48 @@ import { useAuthStore } from '@/lib/store/auth'
 import { TEMPLE } from '@/lib/data/mock'
 import { cn } from '@/lib/utils'
 
-const NAV = [
-  { to: '/', label: 'Home', end: true },
+/**
+ * The bar, and what did not fit in it.
+ *
+ * There is less room here than it looks. The bar is capped at 1,152px, the gutters take
+ * 48, the wordmark about 210 and the Donate and Sign in buttons about 180 — which
+ * leaves roughly 680px for links. Nine of them wanted some 900px, so the row had been
+ * quietly crushing itself for a while, and hall hire had nowhere to go.
+ *
+ * {@link PRIMARY} is what a visitor actually arrives to do: book a priest, book a room,
+ * find out when something is on, eat, enrol a child, or work out who the temple is.
+ * Six of those come to about 580px and leave the bar room to breathe.
+ *
+ * {@link SECONDARY} is not a bin for dead links — every one still has a page, and the
+ * Festivals index and the capital projects are both linked from the homepage body,
+ * which is where somebody browsing rather than navigating will meet them anyway.
+ *
+ * Home is deliberately absent: the wordmark to the left of this row is the way back,
+ * on every site a visitor has ever used. It stays in the mobile drawer, where the
+ * wordmark is in the bar above rather than beside the links, and where vertical space
+ * costs nothing.
+ */
+const PRIMARY = [
   { to: '/puja', label: 'Sponsor a Puja' },
-  { to: '/events', label: 'Festivals' },
-  { to: '/projects', label: 'Projects' },
+  { to: '/facility', label: 'Book a Hall' },
+  { to: '/calendar', label: 'Calendar' },
   { to: '/kitchen', label: 'Cafeteria' },
   { to: '/school', label: 'VHS School' },
-  { to: '/scholarship', label: 'Scholarships' },
-  { to: '/calendar', label: 'Calendar' },
   { to: '/about', label: 'About' },
+]
+
+const SECONDARY = [
+  { to: '/events', label: 'Festivals' },
+  { to: '/projects', label: 'Projects' },
+  { to: '/scholarship', label: 'Scholarships' },
+]
+
+/** The drawer has no width problem, so it shows everything, Home included. */
+const MOBILE_NAV = [
+  { to: '/', label: 'Home', end: true },
+  ...PRIMARY,
+  ...SECONDARY,
+  { to: '/donate', label: 'Donate' },
 ]
 
 export function Header() {
@@ -26,6 +58,10 @@ export function Header() {
   const signOut = useAuthStore((s) => s.signOut)
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
+  const moreActive = SECONDARY.some(
+    (n) => pathname === n.to || pathname.startsWith(`${n.to}/`),
+  )
 
   return (
     <header className="sticky top-0 z-30">
@@ -64,11 +100,10 @@ export function Header() {
           </Link>
 
           <nav className="ml-auto hidden items-center gap-1 lg:flex">
-            {NAV.map((n) => (
+            {PRIMARY.map((n) => (
               <NavLink
                 key={n.to}
                 to={n.to}
-                end={n.end}
                 className={({ isActive }) =>
                   cn(
                     'relative px-3 py-2 text-[14px] font-medium transition-colors',
@@ -81,6 +116,46 @@ export function Header() {
                 {n.label}
               </NavLink>
             ))}
+
+            {/* The overflow. It lights up like any other item when you are on one of
+                its pages, because a bar where nothing is marked leaves you unsure the
+                site knows where you are. */}
+            <Popover
+              align="end"
+              trigger={({ open: isOpen, toggle }) => (
+                <button
+                  type="button"
+                  onClick={toggle}
+                  aria-expanded={isOpen}
+                  className={cn(
+                    'relative flex items-center gap-1 px-3 py-2 text-[14px] font-medium transition-colors',
+                    moreActive ? 'text-brand-600' : 'text-ink/70 hover:text-brand-600',
+                    moreActive &&
+                      'after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-saffron-400',
+                  )}
+                >
+                  More
+                  <ChevronDown
+                    aria-hidden
+                    className={cn('size-3.5 transition-transform', isOpen && 'rotate-180')}
+                  />
+                </button>
+              )}
+            >
+              {(close) =>
+                SECONDARY.map((n) => (
+                  <MenuItem
+                    key={n.to}
+                    onClick={() => {
+                      close()
+                      navigate(n.to)
+                    }}
+                  >
+                    {n.label}
+                  </MenuItem>
+                ))
+              }
+            </Popover>
           </nav>
 
           <div className={cn('flex items-center gap-2', 'lg:ml-4', 'ml-auto lg:ml-4')}>
@@ -162,11 +237,11 @@ export function Header() {
 
       {open ? (
         <nav className="animate-fade-in border-b border-line bg-card px-4 py-2 lg:hidden">
-          {[...NAV, { to: '/donate', label: 'Donate', end: false }].map((n) => (
+          {MOBILE_NAV.map((n) => (
             <NavLink
               key={n.to}
               to={n.to}
-              end={n.end}
+              end={'end' in n ? n.end : undefined}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
                 cn(

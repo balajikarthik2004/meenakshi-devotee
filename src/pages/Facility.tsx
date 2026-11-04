@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Building2,
   Check,
@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Info,
   Loader2,
+  LogIn,
   TriangleAlert,
   Users,
 } from 'lucide-react'
@@ -18,6 +19,8 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Field, Input, Select, Textarea } from '@/components/ui/input'
+import { Sheet } from '@/components/ui/overlay'
+import { LOCAL_KEYS, clearLocal, readLocal, writeLocal } from '@/lib/data/local'
 import { FACILITY_ADDONS, FACILITY_EVENT_TYPES, FACILITY_SLOTS, TIER_BY_KEY } from '@/lib/data/mock'
 import {
   FacilityUnavailableError,
@@ -39,6 +42,24 @@ import { useAsync } from '@/lib/hooks'
 import { cn, fmtDate, money } from '@/lib/utils'
 
 /**
+ * Everything the form holds, as it crosses the sign-in redirect.
+ *
+ * Deliberately only the answers, not the prices: the estimate is recomputed from the
+ * venue and the add-ons on the way back, so a draft written before a rate changed
+ * cannot restore a total the temple no longer charges.
+ */
+interface FacilityDraft {
+  venueId: string
+  eventType: FacilityBooking['eventType']
+  slot: FacilitySlotKey
+  day: string | null
+  guests: number
+  phone: string
+  notes: string
+  qty: Record<string, number>
+}
+
+/**
  * Hall hire, devotee side.
  *
  * The flow is deliberately date-last: space, then occasion, then a calendar that
@@ -47,27 +68,55 @@ import { cn, fmtDate, money } from '@/lib/utils'
  * calendar below greys out what cannot be had, and the slot chips say why.
  */
 export default function Facility() {
-  const user = useAuthStore((s) => s.user)!
+  // May be null: this page is open to a visitor with no account. Everything below has
+  // to read as a planning tool until the moment the booking is actually placed.
+  const user = useAuthStore((s) => s.user)
+  const navigate = useNavigate()
   const now = useMemo(() => new Date(), [])
 
+  /* Read once, through a lazy initialiser rather than at module scope, and deleted on
+     arrival. StrictMode runs this twice in development; both runs see the same value
+     because the delete is an effect, and deleting an already-deleted key is a no-op. */
+  const [draft] = useState(() => readLocal<FacilityDraft | null>(LOCAL_KEYS.facilityDraft, null))
+  useEffect(() => clearLocal(LOCAL_KEYS.facilityDraft), [])
+
   const { data, loading, refresh } = useAsync(
-    async () => Promise.all([listVenues(), listFacilityBookings(), getMembership(user.id)]),
-    [user.id],
+    async () =>
+      Promise.all([
+        listVenues(),
+        // The register, for the calendar's taken/free state only. A guest sees which
+        // dates are gone, never whose they are.
+        listFacilityBookings(),
+        user ? getMembership(user.id) : Promise.resolve(null),
+      ]),
+    [user?.id],
   )
   const [venues, bookings, membership] = data ?? [[], [], null]
 
-  const [venueId, setVenueId] = useState<string>('')
-  const [eventType, setEventType] = useState<FacilityBooking['eventType']>('wedding')
-  const [slot, setSlot] = useState<FacilitySlotKey>('full-day')
-  const [day, setDay] = useState<string | null>(null)
-  const [cursor, setCursor] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1))
-  const [guests, setGuests] = useState(120)
-  const [phone, setPhone] = useState(user.phone)
-  const [notes, setNotes] = useState('')
-  const [qty, setQty] = useState<Record<string, number>>({})
+  const [venueId, setVenueId] = useState<string>(draft?.venueId ?? '')
+  const [eventType, setEventType] = useState<FacilityBooking['eventType']>(
+    draft?.eventType ?? 'wedding',
+  )
+  const [slot, setSlot] = useState<FacilitySlotKey>(draft?.slot ?? 'full-day')
+  const [day, setDay] = useState<string | null>(draft?.day ?? null)
+  const [cursor, setCursor] = useState(() => {
+    // Open on the restored date's month, not on today's, or coming back from sign-in
+    // would show an empty calendar with the chosen date off-screen.
+    const d = draft?.day ? new Date(`${draft.day}T00:00:00`) : now
+    return new Date(d.getFullYear(), d.getMonth(), 1)
+  })
+  const [guests, setGuests] = useState(draft?.guests ?? 120)
+  // `||` rather than `??`: a guest who left the field blank should still pick up the
+  // number on their account once they have signed in.
+  const [phone, setPhone] = useState(draft?.phone || user?.phone || '')
+  const [notes, setNotes] = useState(draft?.notes ?? '')
+  const [qty, setQty] = useState<Record<string, number>>(draft?.qty ?? {})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<FacilityBooking | null>(null)
+  /* Signing in was the last thing they did, and this form was why. Reopening the
+     summary puts them back on the button they were reaching for. */
+  const [confirming, setConfirming] = useState(() => draft != null && user != null)
 
   const venue: FacilityVenue | undefined = venues.find((v) => v.id === venueId) ?? venues[0]
 
@@ -81,7 +130,10 @@ export default function Facility() {
    * the month they wanted.
    */
   useEffect(() => {
-    if (!venue) return
+    // Not once a date is chosen — including one restored from a draft. Moving the
+    // calendar out from under a picked date is how a booking gets made for the wrong
+    // month.
+    if (!venue || day) return
     const earliest = new Date(now)
     earliest.setDate(earliest.getDate() + venue.minNoticeDays)
     setCursor((c) =>
@@ -89,7 +141,7 @@ export default function Facility() {
         ? c
         : new Date(earliest.getFullYear(), earliest.getMonth(), 1),
     )
-  }, [venue, now])
+  }, [venue, now, day])
 
   const items = FACILITY_ADDONS.filter((it) => (qty[it.label] ?? 0) > 0).map((it) => ({
     label: it.label,
@@ -134,8 +186,35 @@ export default function Facility() {
     if (spec) setSlot(spec.defaultSlot)
   }
 
+  /**
+   * Park the form and go and sign in.
+   *
+   * The office is holding a date for a named family, so a booking needs an account on
+   * it — but asking for one before a rate has been seen is what empties the page. The
+   * answers are written out whole so the trip back lands on the same form, with the
+   * summary open.
+   */
+  const signInToConfirm = () => {
+    const d: FacilityDraft = {
+      venueId: venue?.id ?? '',
+      eventType,
+      slot,
+      day,
+      guests,
+      phone: phone.trim(),
+      notes,
+      qty,
+    }
+    // If storage is blocked the draft is lost, so say so rather than returning them to
+    // a form they have to fill in twice without warning.
+    if (!writeLocal(LOCAL_KEYS.facilityDraft, d)) {
+      setError('Your browser is blocking storage, so these answers may not survive sign-in.')
+    }
+    navigate('/signin', { state: { from: '/facility' } })
+  }
+
   const book = async () => {
-    if (!venue || !day) return
+    if (!venue || !day || !user) return
     setBusy(true)
     setError(null)
     try {
@@ -152,6 +231,7 @@ export default function Facility() {
         notes: notes.trim() || undefined,
       })
       setDone(fb)
+      setConfirming(false)
     } catch (e) {
       // The slot can go while the form is open. Re-reading the register puts the
       // calendar straight rather than leaving it advertising a date that is gone.
@@ -193,7 +273,7 @@ export default function Facility() {
         emailSubject={`Your ${venue.name} request for ${fmtDate(done.date)} — ${done.reference}`}
         emailBody={
           <>
-            <p>Dear {user.name},</p>
+            <p>Dear {user?.name ?? 'Devotee'},</p>
             <p className="mt-2">
               We have received your request for the <strong>{venue.name}</strong> on{' '}
               {fmtDate(done.date, 'EEEE, MMMM d, yyyy')} ({slotHint(done.slot)}), reference{' '}
@@ -242,11 +322,30 @@ export default function Facility() {
         title="Book a hall"
         subtitle="Weddings, receptions, upanayanam, seemantham and community gatherings."
         actions={
-          <Link to="/my/halls" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
-            My hall bookings
-          </Link>
+          user ? (
+            <Link to="/my/halls" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+              My hall bookings
+            </Link>
+          ) : null
         }
       />
+
+      {/* Said once, at the top, so nobody fills in four cards wondering whether there
+          is a wall at the end of them. */}
+      {!user ? (
+        <p className="mb-5 flex items-start gap-2.5 rounded-[10px] border border-line bg-tint/60 p-3.5 text-[13px] leading-relaxed text-muted">
+          <Info className="mt-0.5 size-4 shrink-0 text-brand-500" />
+          <span>
+            Plan the whole booking without an account — spaces, dates and rates are all
+            open. We ask you to{' '}
+            <Link to="/signin" className="font-medium text-brand-500 hover:underline">
+              sign in
+            </Link>{' '}
+            at the last step only, so the office knows whose date it is holding. Nothing
+            you have filled in is lost.
+          </span>
+        </p>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
         <div className="space-y-5">
@@ -568,10 +667,24 @@ export default function Facility() {
             </p>
           ) : null}
 
-          <Button size="lg" className="mt-4 w-full" onClick={book} disabled={!canBook || busy}>
-            {busy ? <Loader2 className="animate-spin" /> : <Check />}
-            {busy ? 'Submitting…' : day ? 'Request this date' : 'Pick a date first'}
+          {/* One step back from the old behaviour, which submitted straight off this
+              button. A hall is the largest thing a devotee books here, and the summary
+              is also where a visitor meets the sign-in — by which point they can see
+              exactly what they are signing in to confirm. */}
+          <Button
+            size="lg"
+            className="mt-4 w-full"
+            onClick={() => setConfirming(true)}
+            disabled={!canBook || busy}
+          >
+            <Check />
+            {day ? 'Review & confirm' : 'Pick a date first'}
           </Button>
+          {canBook ? (
+            <p className="mt-2 text-center text-[12px] text-muted">
+              Nothing is requested until you confirm.
+            </p>
+          ) : null}
 
           {discountPct === 0 ? (
             <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
@@ -584,6 +697,102 @@ export default function Facility() {
           ) : null}
         </Card>
       </div>
+
+      {/* ------------------------------------------------------------- confirm */}
+      <Sheet
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title="Confirm your booking"
+        description={`${venue.name} · ${fmtDate(`${day ?? ''}T00:00:00`, 'EEEE, MMMM d, yyyy')}`}
+        footer={
+          user ? (
+            <Button size="lg" className="w-full" onClick={book} disabled={busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Check />}
+              {busy ? 'Submitting…' : 'Confirm booking'}
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <Button size="lg" className="w-full" onClick={signInToConfirm}>
+                <LogIn />
+                Sign in to confirm
+              </Button>
+              <p className="text-center text-[12px] text-muted">
+                No account?{' '}
+                <Link
+                  to="/signup"
+                  state={{ from: '/facility' }}
+                  onClick={signInToConfirm}
+                  className="font-medium text-brand-500 hover:underline"
+                >
+                  Create one
+                </Link>{' '}
+                — these answers are kept.
+              </p>
+            </div>
+          )
+        }
+      >
+        <dl className="divide-y divide-line text-[13.5px]">
+          {[
+            { label: 'Space', value: `${venue.name} · seats ${venue.capacity}` },
+            {
+              label: 'Date',
+              value: day ? fmtDate(`${day}T00:00:00`, 'EEEE, MMMM d, yyyy') : '—',
+            },
+            { label: 'Slot', value: `${slotLabel(slot)} · ${slotHint(slot)}` },
+            { label: 'Occasion', value: eventTypeLabel(eventType) },
+            { label: 'Expected guests', value: String(guests) },
+            ...(items.length
+              ? [{ label: 'Add-ons', value: items.map((l) => `${l.label} ×${l.qty}`).join(', ') }]
+              : []),
+            { label: 'Contact number', value: phone.trim() || '—' },
+            ...(notes.trim() ? [{ label: 'Notes', value: notes.trim() }] : []),
+            // Who the office will be holding the date for. A guest sees the row as a
+            // blank waiting on sign-in rather than not seeing it at all, because it is
+            // the reason the next button asks them to sign in.
+            {
+              label: 'Booked by',
+              value: user ? `${user.name} · ${user.email}` : 'Sign in at the next step',
+            },
+          ].map((r) => (
+            <div key={r.label} className="flex flex-wrap items-baseline justify-between gap-x-4 py-2.5">
+              <dt className="text-muted">{r.label}</dt>
+              <dd className="min-w-0 text-right font-medium text-ink">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-4 rounded-[10px] border border-line bg-tint/50 p-3.5">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[13.5px] text-muted">Hire total</span>
+            <span className="text-[20px] font-medium tabular-nums text-ink">
+              {money(price.total)}
+            </span>
+          </div>
+          {price.discount > 0 ? (
+            <div className="mt-1 flex items-baseline justify-between gap-3 text-[12.5px] text-leaf-600">
+              <span>Member discount ({discountPct}%)</span>
+              <span className="tabular-nums">−{money(price.discount)}</span>
+            </div>
+          ) : null}
+          <div className="mt-1 flex items-baseline justify-between gap-3 text-[12.5px] text-muted">
+            <span>Refundable deposit</span>
+            <span className="tabular-nums">{money(price.deposit)}</span>
+          </div>
+        </div>
+
+        <p className="mt-3 text-[12.5px] leading-relaxed text-muted">
+          Confirming sends a request, not a payment. The office confirms the date within one
+          business day and invoices afterwards; the date is held for you until then.
+        </p>
+
+        {error ? (
+          <p className="mt-3 flex items-start gap-1.5 rounded-[8px] border border-brand-500/30 bg-brand-500/[0.06] p-2.5 text-[12.5px] text-brand-600">
+            <TriangleAlert className="mt-px size-3.5 shrink-0" />
+            {error}
+          </p>
+        ) : null}
+      </Sheet>
     </>
   )
 }

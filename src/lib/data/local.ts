@@ -61,6 +61,20 @@ export const LOCAL_KEYS = {
    * Created rows are stored whole: a request has no seeded original to fall back to.
    */
   facility: `${NS}:facility`,
+  /**
+   * A half-filled hall booking, held only long enough to cross the sign-in redirect.
+   *
+   * Hall hire is open to a visitor with no account — somebody pricing a wedding hall is
+   * usually a stranger to the temple, and a sign-in wall at the front door is where that
+   * person leaves. They can choose a space, a date and the extras; the account is asked
+   * for at the last step, because the office has to know who it is holding a date for.
+   *
+   * That last step navigates away, which would otherwise throw the whole form away. So
+   * the draft is written here, read once on the way back, and deleted on arrival — it is
+   * a hand-off across one redirect, not a saved basket. Anything longer-lived would mean
+   * a stale form reopening weeks later on a date that has since gone.
+   */
+  facilityDraft: `${NS}:facility-draft`,
 } as const
 
 export function readLocal<T>(key: string, fallback: T): T {

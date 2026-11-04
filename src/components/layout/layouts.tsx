@@ -87,7 +87,7 @@ const APP_NAV: { heading?: string; items: NavItem[] }[] = [
     heading: 'Worship & giving',
     items: [
       // { to: '/my/pujas', label: 'My Pujas', Icon: Flame },
-      { to: '/puja', label: 'Annual Puja', Icon: Sparkles },
+      { to: '/puja', label: 'Puja', Icon: Sparkles },
       { to: '/donate', label: 'Donate', Icon: HandCoins },
       { to: '/projects', label: 'Projects', Icon: HardHat },
       { to: '/membership', label: 'Membership', Icon: Heart },

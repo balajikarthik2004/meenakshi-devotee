@@ -94,6 +94,12 @@ export default function App() {
                   logging you out. */}
               <Route path="/calendar" element={<CalendarPage />} />
               <Route path="/scholarship" element={<Scholarship />} />
+              {/* Hall hire is open too. A visitor pricing a wedding hall has no account
+                  and should not be asked for one before they have seen a rate; the page
+                  asks them to sign in at the confirm step instead, where the office
+                  genuinely needs to know whose date it is holding. `/my/halls`, which
+                  shows what *you* have booked, stays behind `RequireAuth` below. */}
+              <Route path="/facility" element={<Facility />} />
               <Route path="/projects" element={<ProjectsIndex />} />
               <Route path="/projects/:slug" element={<ProjectDetail />} />
               {/* A visitor after darshan should be able to order a coffee without
@@ -134,7 +140,6 @@ export default function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/my/pujas" element={<MyPujas />} />
                 <Route path="/my/receipts" element={<MyReceipts />} />
-                <Route path="/facility" element={<Facility />} />
                 <Route path="/my/halls" element={<MyHalls />} />
               </Route>
             </Route>
