@@ -194,7 +194,7 @@ export default function Facility() {
    * answers are written out whole so the trip back lands on the same form, with the
    * summary open.
    */
-  const signInToConfirm = () => {
+  const saveDraft = () => {
     const d: FacilityDraft = {
       venueId: venue?.id ?? '',
       eventType,
@@ -210,6 +210,10 @@ export default function Facility() {
     if (!writeLocal(LOCAL_KEYS.facilityDraft, d)) {
       setError('Your browser is blocking storage, so these answers may not survive sign-in.')
     }
+  }
+
+  const signInToConfirm = () => {
+    saveDraft()
     navigate('/signin', { state: { from: '/facility' } })
   }
 
@@ -721,7 +725,7 @@ export default function Facility() {
                 <Link
                   to="/signup"
                   state={{ from: '/facility' }}
-                  onClick={signInToConfirm}
+                  onClick={saveDraft}
                   className="font-medium text-brand-500 hover:underline"
                 >
                   Create one

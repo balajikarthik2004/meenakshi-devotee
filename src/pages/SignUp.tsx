@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Loader2, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -13,7 +13,12 @@ import { useGuestDonorStore } from '@/lib/store/guest'
 
 export default function SignUp() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [params] = useSearchParams()
+  /* Where to go once the account exists. The dashboard is right for somebody who came
+     here to join, but not for somebody sent from a half-filled form — hall hire parks
+     its draft and expects to be handed back to it. Same contract `SignIn` honours. */
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
   const setUser = useAuthStore((s) => s.setUser)
   const clearContact = useGuestDonorStore((s) => s.clearContact)
   const [busy, setBusy] = useState(false)
@@ -43,7 +48,7 @@ export default function SignUp() {
     // and leaving it behind would keep `useDonorIdentity` juggling two identities.
     clearContact()
     setBusy(false)
-    navigate('/dashboard', { replace: true })
+    navigate(from, { replace: true })
   }
 
   return (
